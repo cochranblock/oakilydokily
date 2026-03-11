@@ -233,13 +233,18 @@ body::after {
   overflow: hidden;
 }
 
-/* Hero — 8-bit original mural as cover */
+/* Hero — interactive WASM mural as cover, static fallback */
 .hero-cover {
+  position: relative;
   width: 100%;
   aspect-ratio: 3 / 1;
   max-height: 400px;
   overflow: hidden;
   background: var(--surface);
+}
+.hero-cover #glcanvas {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 .hero-cover-img {
   display: block;

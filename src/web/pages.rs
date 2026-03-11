@@ -19,11 +19,30 @@ fn f70(p0: &str, p1: &str, p2: &str, p3: &str) -> String {
 
 const FOOTER: &str = r##"</main><footer class="footer"><nav class="footer-nav"><a href="/">Home</a><a href="/about">About</a><a href="/contact">Contact</a><a href="/waiver">Waiver</a></nav><p>&copy; 2026 OakilyDokily</p><p class="footer-cta"><a href="mailto:byrdkaylie34@gmail.com?subject=OakilyDokily%20Inquiry" class="btn btn-primary">Get in Touch</a></p></footer><script>(function(){var t=document.querySelector('.nav-toggle');var n=document.getElementById('nav-links');if(t&&n){t.onclick=function(){var o=n.classList.toggle('nav-open');t.setAttribute('aria-expanded',o);}}}());</script></body></html>"##;
 
-/// f73 = hero cover — 8-bit island mural as cover image (LinkedIn/Facebook style)
+/// f73 = hero cover — interactive WASM mural with static fallback
 fn f73() -> String {
     r#"<div class="hero-cover" aria-hidden="true">
-          <img src="/assets/mural.png" alt="" class="hero-cover-img" width="1200" height="400">
+          <img src="/assets/mural.png" alt="" class="hero-cover-img" id="mural-fallback" width="1200" height="400">
+          <canvas id="glcanvas" tabindex="-1" style="position:absolute;top:0;left:0;width:100%;height:100%;display:none;"></canvas>
         </div>"#.to_string()
+}
+
+/// f73b = mural scripts — gl.js + bridge + loader, appended before </body>
+fn f73b() -> &'static str {
+    r#"<script src="/assets/gl.js"></script>
+<script src="/assets/mural-bridge.js"></script>
+<script>
+(function(){
+  var c=document.getElementById('glcanvas');
+  var fb=document.getElementById('mural-fallback');
+  if(!c||typeof load!=='function'){return;}
+  c.width=c.parentElement.offsetWidth;
+  c.height=c.parentElement.offsetHeight;
+  c.style.display='block';
+  if(fb){fb.style.display='none';}
+  load('/assets/mural-wasm.wasm');
+})();
+</script>"#
 }
 
 /// f104 = home. GET /. Hero with 8-bit island cover, auth link.
@@ -40,10 +59,11 @@ pub async fn home(State(_s): State<Arc<AppState>>, jar: CookieJar) -> Html<Strin
         v0, book_call
     );
     Html(format!(
-        "{}{}{}{}",
+        "{}{}{}{}{}",
         f70("OakilyDokily | Veterinary Professional Services", "OakilyDokily — Veterinary professional services for clinics and boarding facilities. Kennel operations, overnight care, surgical support, technician coverage.", "home", &format!(r#"<link rel="preload" href="/assets/mural.png" as="image" />{}"#, head::f80())),
         head::f90(&auth_link),
         content,
+        f73b(),
         FOOTER
     ))
 }
