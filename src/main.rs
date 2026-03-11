@@ -70,7 +70,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         app_id: "oakilydokily",
         hostnames: std::env::var("OD_HOSTNAMES")
             .unwrap_or_else(|_| {
-                "oakilydokily.com,www.oakilydokily.com,kaylie.cochranblock.org".into()
+                "oakilydokily.com,www.oakilydokily.com".into()
             })
             .split(',')
             .map(|s| s.trim().to_string())

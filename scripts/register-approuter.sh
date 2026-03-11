@@ -36,7 +36,7 @@ curl -s -X POST "$BASE/approuter/register" \
   -H "Content-Type: application/json" \
   -d '{
     "app_id": "oakilydokily",
-    "hostnames": ["oakilydokily.com", "www.oakilydokily.com", "kaylie.cochranblock.org"],
+    "hostnames": ["oakilydokily.com", "www.oakilydokily.com"],
     "backend_url": "http://127.0.0.1:3000"
   }'
 

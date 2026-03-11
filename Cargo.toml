@@ -48,7 +48,7 @@ urlencoding = "2"
 rand = "0.8"
 serde = { workspace = true }
 serde_json = { workspace = true }
-approuter-client = { path = "../approuter/client", optional = true }
+approuter-client = { git = "https://github.com/cochranblock/approuter", optional = true }
 reqwest = { version = "0.11", features = ["json", "rustls-tls", "blocking"], default-features = false }
 rust-gmail = { version = "0.2", features = ["blocking"] }
 jsonwebtoken = "9"
@@ -57,7 +57,7 @@ bcrypt = "0.17"
 dirs = "5"
 colored = { version = "2", optional = true }
 scraper = { version = "0.19", optional = true }
-exopack = { path = "../kova/exopack", optional = true, features = ["screenshot", "interface", "triple_sims", "devtools"] }
+exopack = { git = "https://github.com/cochranblock/exopack", optional = true, features = ["screenshot", "interface", "triple_sims", "devtools"] }
 
 [dev-dependencies]
 proptest = "1"
