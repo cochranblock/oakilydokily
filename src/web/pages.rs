@@ -23,7 +23,7 @@ const FOOTER: &str = r##"</main><footer class="footer"><nav class="footer-nav"><
 fn f73() -> String {
     r#"<div class="hero-cover" aria-hidden="true">
           <img src="/assets/mural.png" alt="" class="hero-cover-img" id="mural-fallback" width="1200" height="400">
-          <canvas id="glcanvas" tabindex="-1" style="position:absolute;top:0;left:0;width:100%;height:100%;display:none;"></canvas>
+          <canvas id="glcanvas" tabindex="-1" style="position:absolute;top:0;left:0;width:100%;height:100%;display:none;image-rendering:pixelated;"></canvas>
         </div>"#.to_string()
 }
 
@@ -36,8 +36,13 @@ fn f73b() -> &'static str {
   var c=document.getElementById('glcanvas');
   var fb=document.getElementById('mural-fallback');
   if(!c||typeof load!=='function'){return;}
-  c.width=c.parentElement.offsetWidth;
-  c.height=c.parentElement.offsetHeight;
+  var p=c.parentElement;
+  var dpr=window.devicePixelRatio||1;
+  var w=p.offsetWidth, h=p.offsetHeight;
+  c.width=Math.round(w*dpr);
+  c.height=Math.round(h*dpr);
+  c.style.width=w+'px';
+  c.style.height=h+'px';
   c.style.display='block';
   if(fb){fb.style.display='none';}
   load('/assets/mural-wasm.wasm');

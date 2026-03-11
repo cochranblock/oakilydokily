@@ -72,7 +72,8 @@ impl Pet {
         match self.state {
             PetState::Wandering => {
                 self.pos += self.vel * dt;
-                if self.pos.x < 0. || self.pos.x > 800. {
+                let w = macroquad::prelude::screen_width();
+                if self.pos.x < 32. || self.pos.x > w - 32. {
                     self.vel.x = -self.vel.x;
                 }
             }

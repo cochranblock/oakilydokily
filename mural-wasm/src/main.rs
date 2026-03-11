@@ -37,10 +37,13 @@ async fn main() {
     let sprite_sheet = SpriteSheet::load("/assets/1000003453.png").await;
     let atlas = TextureAtlas::from_sheet(&sprite_sheet);
 
+    // Position pets on the grassy areas of the mural (fractional, scaled at draw time)
+    let w = screen_width();
+    let h = screen_height();
     let mut pets = vec![
-        Pet::new(Species::Cat, vec2(100., 200.), &atlas),
-        Pet::new(Species::Dog, vec2(250., 180.), &atlas),
-        Pet::new(Species::GuineaPig, vec2(400., 220.), &atlas),
+        Pet::new(Species::Cat, vec2(w * 0.15, h * 0.55), &atlas),
+        Pet::new(Species::Dog, vec2(w * 0.45, h * 0.50), &atlas),
+        Pet::new(Species::GuineaPig, vec2(w * 0.70, h * 0.52), &atlas),
     ];
 
     let mut scene = SceneState::default();

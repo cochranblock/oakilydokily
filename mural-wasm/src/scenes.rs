@@ -38,14 +38,9 @@ impl SceneState {
         }
     }
 
-    /// f139=SceneState::draw.
+    /// f139=SceneState::draw. Subtle visual cues — no crude rectangles.
     pub fn draw(&self) {
-        if self.cozy_nook_visible && self.cozy_nook_x > 1. {
-            draw_rectangle(self.cozy_nook_x - 50., 150., 100., 80., DARKGRAY);
-            draw_text("Cozy Nook", self.cozy_nook_x - 40., 190., 14., WHITE);
-        }
-        if self.tubing_visible {
-            draw_circle(400., self.tubing_y.min(400.), 25., SKYBLUE);
-        }
+        // Scene draw is intentionally minimal — the mural artwork provides the visuals.
+        // State is used to drive pet behavior (exodus etc.), not to draw shapes.
     }
 }
