@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/cochranblock/oakilydokily/main/assets/favicon.svg" alt="mural-wasm" width="48">
+</p>
+
 # OakilyDokily Interactive Mural (Rust + Macroquad, WASM)
 
 High-performance 2D interactive mural targeting `wasm32-unknown-unknown` for web.

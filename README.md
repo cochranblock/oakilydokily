@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/cochranblock/oakilydokily/main/assets/favicon.svg" alt="OakilyDokily" width="64">
+</p>
+
 # oakilydokily
 
 Hero site with interactive mural. Rust Axum server + mural-wasm (Macroquad).
