@@ -11,7 +11,7 @@
           if (wasm_exports && wasm_exports.mural_set_scroll_x) wasm_exports.mural_set_scroll_x(window.scrollX);
           if (wasm_exports && wasm_exports.mural_set_scroll_y) wasm_exports.mural_set_scroll_y(window.scrollY);
         } catch (e) { console.warn('mural-bridge scroll:', e); }
-      }, 50);
+      }, 16);
       var c = document.getElementById('glcanvas');
       if (c && wasm_exports && typeof wasm_exports.mural_set_mouse === 'function') {
         c.addEventListener('mousemove', function(e) {

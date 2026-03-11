@@ -23,6 +23,8 @@ pub struct Pet {
     pub state: PetState,
     pub anim_frame: u32,
     pub anim_timer: f32,
+    /// Seconds in Interacting before returning to Wandering.
+    pub interaction_timer: f32,
     pub hearts: Vec<HeartParticle>,
 }
 
@@ -43,6 +45,7 @@ impl Pet {
             state: PetState::Wandering,
             anim_frame: 0,
             anim_timer: 0.,
+            interaction_timer: 0.,
             hearts: vec![],
         }
     }
@@ -79,7 +82,14 @@ impl Pet {
                 }
             }
             PetState::Interacting => {
-                // Hold interaction for a bit
+                self.interaction_timer += dt;
+                if self.interaction_timer > 2.0 {
+                    self.interaction_timer = 0.;
+                    self.state = PetState::Wandering;
+                    // Alternate direction so pets separate naturally
+                    let dir = if (self.pos.x * 0.1) as i32 % 2 == 0 { 1. } else { -1. };
+                    self.vel = vec2(20. * dir, 0.);
+                }
             }
             PetState::Sleeping => {}
             PetState::Exodus => {

@@ -69,8 +69,8 @@ async fn main() {
         last_scroll_y = scroll_y;
         let _ = mouse_pos;
 
-        // Occlusion culling: process pets in viewport, plus Exodus pets until they exit
-        let viewport = Rect::new(0., scroll_y, screen_width(), screen_height());
+        // Hero canvas is fixed viewport — always process pets in canvas bounds, plus Exodus until exit
+        let viewport = Rect::new(0., 0., screen_width(), screen_height());
         let visible_pets: Vec<usize> = pets
             .iter()
             .enumerate()
@@ -90,7 +90,9 @@ async fn main() {
                 let (pi, pj) = (pets[i].species, pets[j].species);
                 if pi == pj && pets[i].pos.distance(pets[j].pos) < 30. {
                     pets[i].state = PetState::Interacting;
+                    pets[i].interaction_timer = 0.;
                     pets[j].state = PetState::Interacting;
+                    pets[j].interaction_timer = 0.;
                     if pi == Species::GuineaPig {
                         pets[i].trigger_kiss();
                         pets[j].trigger_kiss();
