@@ -2,6 +2,27 @@
 
 High-performance 2D interactive mural targeting `wasm32-unknown-unknown` for web.
 
+## Proof of Artifacts
+
+*Wire diagrams for quick review.*
+
+### Wire / Architecture
+
+```mermaid
+flowchart LR
+    JS[JS / HTML] --> Bridge[mural-bridge.js]
+    Bridge --> WASM[mural-wasm.wasm]
+    WASM --> Macroquad[Macroquad render]
+    Macroquad --> Pets[Pets: Cat Dog GuineaPig]
+    Macroquad --> Scenes[Scenes: Cozy Nook Tubing Doggy Door]
+```
+
+### Demo
+
+*Add `docs/artifacts/demo-mural.gif` for pets wandering, interaction, guinea pig kiss.*
+
+---
+
 ## Build
 
 ```bash
