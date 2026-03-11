@@ -1,4 +1,4 @@
-# Copyright (c) 2026 The Cochran Block. All rights reserved.
+# Unlicense — cochranblock.org
 # Interactive 2D mural: Rust + Macroquad, wasm32 for web.
 
 [package]

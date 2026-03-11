@@ -1,4 +1,4 @@
-# Copyright (c) 2026 The Cochran Block. All rights reserved.
+# Unlicense — cochranblock.org
 #!/bin/bash
 # Register oakilydokily with approuter for Cloudflare tunnel routing.
 # Uses approuter's openapi.json to discover base URL. Run when approuter is up.

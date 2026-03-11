@@ -1,4 +1,4 @@
-// Copyright (c) 2026 The Cochran Block. All rights reserved.
+// Unlicense — cochranblock.org
 //! Waiver confirmation email. Gmail API (Workspace) or Resend. P20: blocking, no spawn.
 
 /// f78 = send_waiver_confirmation. Why: Blocking per P20. Gmail API for Workspace; Resend fallback.

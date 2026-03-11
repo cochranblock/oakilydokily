@@ -1,4 +1,4 @@
-// Copyright (c) 2026 The Cochran Block. All rights reserved.
+// Unlicense — cochranblock.org
 //! Sharded D1 auth storage. f78=user_get f79=user_create. Replaces on-premise users table.
 
 #![allow(non_camel_case_types, non_snake_case, dead_code)]

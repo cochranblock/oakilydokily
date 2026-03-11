@@ -1,4 +1,4 @@
-// Copyright (c) 2026 The Cochran Block. All rights reserved.
+// Unlicense — cochranblock.org
 //! Scroll-triggered scenes: Cozy Nook, Winter Tubing, Doggy Door footer.
 
 use macroquad::prelude::*;

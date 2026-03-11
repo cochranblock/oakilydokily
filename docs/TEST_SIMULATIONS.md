@@ -1,4 +1,4 @@
-<!-- Copyright (c) 2026 The Cochran Block. All rights reserved. -->
+<!-- Unlicense — cochranblock.org -->
 # Test Simulations — UI/UX, Feature Gap, User Analysis
 
 **Target:** oakilydokily.com (Kaylie Cochran veterinary professional services)  

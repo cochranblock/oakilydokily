@@ -1,4 +1,4 @@
-// Copyright (c) 2026 The Cochran Block. All rights reserved.
+// Unlicense — cochranblock.org
 //! SpriteSheet: algorithmic grid slicing. TextureAtlas: species + animation mapping.
 
 use macroquad::prelude::*;

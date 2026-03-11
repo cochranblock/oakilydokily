@@ -1,4 +1,4 @@
-// Copyright (c) 2026 The Cochran Block. All rights reserved.
+// Unlicense — cochranblock.org
 //! Pet entity: Wandering, Sleeping, Interacting. Proximity detection. Guinea Pig kiss + hearts.
 
 use macroquad::prelude::*;

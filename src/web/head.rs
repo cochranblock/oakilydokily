@@ -1,4 +1,4 @@
-// Copyright (c) 2026 The Cochran Block. All rights reserved.
+// Unlicense — cochranblock.org
 //! Shared head helpers: GA4, etc.
 
 /// f80 = ga4_script. Returns gtag script when GA4_MEASUREMENT_ID set.

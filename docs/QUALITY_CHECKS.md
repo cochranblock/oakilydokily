@@ -1,4 +1,4 @@
-<!-- Copyright (c) 2026 The Cochran Block. All rights reserved. -->
+<!-- Unlicense — cochranblock.org -->
 # Test Quality Checks
 
 **Purpose:** Ensure tests are industry-relevant, deterministic, and actionable.  

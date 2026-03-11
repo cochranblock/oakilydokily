@@ -1,4 +1,4 @@
-// Copyright (c) 2026 The Cochran Block. All rights reserved.
+// Unlicense — cochranblock.org
 //! Sign in with Google + Facebook OAuth + manual (email/password). f82/f83=Google f98/f99=Facebook f100/f101=manual f84=logout
 
 #![allow(non_camel_case_types, non_snake_case, dead_code)]

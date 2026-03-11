@@ -1,4 +1,4 @@
-// Copyright (c) 2026 The Cochran Block. All rights reserved.
+// Unlicense — cochranblock.org
 //! JS/Rust bridge: scrollY, mouse_pos passed from JS into the engine.
 //! Uses #[no_mangle] extern "C" for miniquad gl.js compatibility (no wasm-bindgen).
 

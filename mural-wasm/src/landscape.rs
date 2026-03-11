@@ -1,4 +1,4 @@
-// Copyright (c) 2026 The Cochran Block. All rights reserved.
+// Unlicense — cochranblock.org
 //! Landscape texture: mural.png background with crisp 8-bit pixels.
 
 use macroquad::prelude::*;

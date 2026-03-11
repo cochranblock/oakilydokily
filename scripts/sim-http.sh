@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2026 The Cochran Block. All rights reserved.
+# Unlicense — cochranblock.org
 # HTTP-based simulation: UI/UX, Feature Gap, User Analysis
 # Run against BASE (default http://127.0.0.1:3000). Server must be up.
 # Usage: ./scripts/sim-http.sh   or   BASE=https://oakilydokily.com ./scripts/sim-http.sh

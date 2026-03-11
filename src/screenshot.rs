@@ -1,4 +1,4 @@
-// Copyright (c) 2026 The Cochran Block. All rights reserved.
+// Unlicense — cochranblock.org
 //! Screenshot helpers for TRIPLE SIMS. Uses exopack devtools (chromiumoxide) for real browser screenshots including WASM.
 
 use exopack::devtools;

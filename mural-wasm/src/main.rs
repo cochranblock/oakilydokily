@@ -1,4 +1,4 @@
-// Copyright (c) 2026 The Cochran Block. All rights reserved.
+// Unlicense — cochranblock.org
 //! Interactive 2D mural: pets, proximity detection, scroll-triggered scenes.
 //! Build: cargo build --target wasm32-unknown-unknown -p mural-wasm --release
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2026 The Cochran Block. All rights reserved.
+// Unlicense — cochranblock.org
 //! f70=oakilydokily_test. TRIPLE SIMS via exopack::triple_sims::f60. f30=run_tests. f53=screenshot. f62=console check.
 
 #[tokio::main(flavor = "current_thread")]

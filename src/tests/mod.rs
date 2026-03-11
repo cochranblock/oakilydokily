@@ -1,4 +1,4 @@
-// Copyright (c) 2026 The Cochran Block. All rights reserved.
+// Unlicense — cochranblock.org
 //! f30 = run_tests. HTTP-based UI/UX, feature gap, user analysis. Server must be up.
 
 use std::time::Duration;

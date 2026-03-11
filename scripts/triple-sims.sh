@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2026 The Cochran Block. All rights reserved.
+# Unlicense — cochranblock.org
 # Run TRIPLE SIMS: 3 sequential passes. All must pass.
 # Use: ./scripts/triple-sims.sh [--http]
 # --http: use sim-http.sh against BASE (server must be up) instead of cargo test
