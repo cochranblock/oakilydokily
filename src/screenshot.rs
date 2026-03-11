@@ -1,4 +1,5 @@
 // Unlicense — cochranblock.org
+// Contributors: GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
 //! Screenshot helpers for TRIPLE SIMS. Uses exopack devtools (chromiumoxide) for real browser screenshots including WASM.
 
 use exopack::devtools;

@@ -1,4 +1,5 @@
 // Unlicense — cochranblock.org
+// Contributors: GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
 //! Interactive 2D mural: pets, proximity detection, scroll-triggered scenes.
 //! Build: cargo build --target wasm32-unknown-unknown -p mural-wasm --release
 

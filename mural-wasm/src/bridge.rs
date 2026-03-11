@@ -1,4 +1,5 @@
 // Unlicense — cochranblock.org
+// Contributors: GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
 //! JS/Rust bridge: scrollY, mouse_pos passed from JS into the engine.
 //! Uses #[no_mangle] extern "C" for miniquad gl.js compatibility (no wasm-bindgen).
 

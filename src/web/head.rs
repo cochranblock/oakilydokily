@@ -1,4 +1,5 @@
 // Unlicense — cochranblock.org
+// Contributors: GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
 //! Shared head helpers: GA4, etc.
 
 /// f80 = ga4_script. Returns gtag script when GA4_MEASUREMENT_ID set.

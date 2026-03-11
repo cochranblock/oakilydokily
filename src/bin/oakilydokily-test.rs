@@ -1,4 +1,5 @@
 // Unlicense — cochranblock.org
+// Contributors: GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
 //! f70=oakilydokily_test. TRIPLE SIMS via exopack::triple_sims::f60. f30=run_tests. f53=screenshot. f62=console check.
 
 #[tokio::main(flavor = "current_thread")]

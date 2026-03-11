@@ -1,4 +1,5 @@
 <!-- Unlicense — cochranblock.org -->
+<!-- Contributors: GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3 -->
 # Test Simulations — UI/UX, Feature Gap, User Analysis
 
 **Target:** oakilydokily.com (Kaylie Cochran veterinary professional services)  
