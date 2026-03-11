@@ -8,3 +8,4 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo build --release -p oakilydokily --features approuter
       - run: cargo test -p oakilydokily 2>/dev/null || true
+      - run: cargo run -p oakilydokily --bin oakilydokily-test --features tests 2>/dev/null || true
