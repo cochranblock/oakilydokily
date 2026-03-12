@@ -20,6 +20,7 @@ if [ -f "$MURAL" ] && python3 -c "import rembg" 2>/dev/null; then
   (cd "$SCRIPT_DIR/scripts" && python3 claymation_pipeline.py ../../assets/mural.png -o ../assets/claymation_out --pixel-scale 1.0 2>/dev/null) || true
   if [ -f "$CLAY_OUT/claymation_spritesheet.png" ]; then
     cp "$CLAY_OUT/claymation_spritesheet.png" "$CLAY_OUT/claymation_meta.json" "$OAKILY/mural-wasm/assets/"
+    [ -f "$CLAY_OUT/background_filled.png" ] && cp "$CLAY_OUT/background_filled.png" "$OAKILY/mural-wasm/assets/"
     echo "Using claymation animals."
   fi
 fi

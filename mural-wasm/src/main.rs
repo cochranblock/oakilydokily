@@ -1,5 +1,5 @@
 // Unlicense — cochranblock.org
-//! Interactive 2D mural: claymation animals (preferred) or Cat/Dog/GuineaPig sprites.
+//! Interactive 2D mural: claymation animals only. No claymation = mural only (no pets).
 
 #![allow(dead_code)]
 
@@ -41,8 +41,15 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf)]
 async fn main() {
-    let landscape = landscape::load("/assets/mural.png").await;
     let claymation = ClaymationSheet::load().await;
+    // When claymation available, use inpainted background (no original animals)
+    let bg_filled = landscape::load("/assets/background_filled.png").await;
+    let mural = landscape::load("/assets/mural.png").await;
+    let landscape = if claymation.is_some() {
+        bg_filled.or(mural)
+    } else {
+        mural
+    };
 
     let (mw, mh) = landscape
         .as_ref()

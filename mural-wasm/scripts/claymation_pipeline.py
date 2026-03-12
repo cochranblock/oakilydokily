@@ -139,15 +139,15 @@ def segment_foreground(pil_img: Image.Image, rgba: np.ndarray) -> np.ndarray:
 
 
 def _segment_animals_by_color(rgba: np.ndarray) -> np.ndarray:
-    """Extract animal-like regions: not grass, water, or soil. OpenCV H in 0-180."""
+    """Extract animal-like regions: not grass, water, soil, trunk. OpenCV H in 0-180."""
     rgb = rgba[:, :, :3]
     hsv = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)
     h, s, v = hsv[:, :, 0], hsv[:, :, 1], hsv[:, :, 2]
-    green = (h >= 17) & (h <= 42) & (s > 40)
-    blue = (h >= 45) & (h <= 65)
-    soil = ((h <= 15) | (h >= 170)) & (s > 45) & (v < 140)
-    background = green | blue | soil | (s < 25)
-    animal_candidates = ~background & (v > 30)
+    green = (h >= 15) & (h <= 45) & (s > 35)
+    blue = (h >= 42) & (h <= 70)
+    soil = ((h <= 15) | (h >= 168)) & (s > 40) & (v < 150)
+    background = green | blue | soil | (s < 22)
+    animal_candidates = ~background & (v > 25)
     mask = animal_candidates.astype(np.uint8) * 255
     kernel = np.ones((3, 3), np.uint8)
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
@@ -155,7 +155,7 @@ def _segment_animals_by_color(rgba: np.ndarray) -> np.ndarray:
     return mask
 
 
-def _is_mostly_green(rgba: np.ndarray, comp_mask: np.ndarray, thresh: float = 0.22) -> bool:
+def _is_mostly_green(rgba: np.ndarray, comp_mask: np.ndarray, thresh: float = 0.12) -> bool:
     """True if >thresh of masked pixels are green (palm fronds, grass)."""
     rgb = rgba[:, :, :3]
     hsv = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)
@@ -167,6 +167,51 @@ def _is_mostly_green(rgba: np.ndarray, comp_mask: np.ndarray, thresh: float = 0.
         return False
     n_green = np.count_nonzero(masked & green)
     return n_green / n_masked >= thresh
+
+
+def _is_mostly_brown_trunk(rgba: np.ndarray, comp_mask: np.ndarray, thresh: float = 0.38) -> bool:
+    """True if >thresh of masked pixels are trunk/soil brown (H 18-35, S 45-90, V 55-140)."""
+    rgb = rgba[:, :, :3]
+    hsv = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)
+    h, s, v = hsv[:, :, 0], hsv[:, :, 1], hsv[:, :, 2]
+    trunk = (h >= 18) & (h <= 35) & (s >= 45) & (s <= 90) & (v >= 55) & (v <= 140)
+    masked = comp_mask > 0
+    n_masked = np.count_nonzero(masked)
+    if n_masked == 0:
+        return False
+    return np.count_nonzero(masked & trunk) / n_masked >= thresh
+
+
+def _has_fur_colors(rgba: np.ndarray, comp_mask: np.ndarray, min_frac: float = 0.08) -> bool:
+    """True if >=min_frac of masked pixels are animal fur colors (orange, tan, white, pink, grey, black)."""
+    rgb = rgba[:, :, :3]
+    hsv = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)
+    h, s, v = hsv[:, :, 0], hsv[:, :, 1], hsv[:, :, 2]
+    orange_tan = (h >= 8) & (h <= 38) & (s >= 25) & (s <= 95) & (v >= 70)
+    white = (s <= 45) & (v >= 170)
+    pink = ((h <= 15) | (h >= 160)) & (s >= 12) & (s <= 75) & (v >= 100)
+    grey = (s <= 60) & (v >= 35) & (v <= 190)
+    black = (s <= 90) & (v <= 55)  # dark fur, spots (exclude saturated dark soil)
+    fur = orange_tan | white | pink | grey | black
+    masked = comp_mask > 0
+    n_masked = np.count_nonzero(masked)
+    if n_masked == 0:
+        return False
+    return np.count_nonzero(masked & fur) / n_masked >= min_frac
+
+
+def _contour_solidity(comp_mask: np.ndarray) -> float:
+    """Solidity = area / convex_hull_area. Compact blobs ~0.8+, palm fronds ~0.5-0.7."""
+    contours, _ = cv2.findContours(comp_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if not contours:
+        return 0.0
+    c = max(contours, key=cv2.contourArea)
+    area = cv2.contourArea(c)
+    if area < 10:
+        return 0.0
+    hull = cv2.convexHull(c)
+    hull_area = cv2.contourArea(hull)
+    return area / hull_area if hull_area > 0 else 0.0
 
 
 def connected_components(
@@ -193,6 +238,12 @@ def connected_components(
             continue
         comp_mask = (labels == i).astype(np.uint8) * 255
         if _is_mostly_green(rgba, comp_mask):
+            continue
+        if _is_mostly_brown_trunk(rgba, comp_mask):
+            continue
+        if not _has_fur_colors(rgba, comp_mask):
+            continue
+        if _contour_solidity(comp_mask) < 0.42:
             continue
         if area > mask.size * 0.2 and num_labels == 2:
             split = _watershed_split(comp_mask, min_area, max_area, max_aspect, rgba)
@@ -236,6 +287,12 @@ def _watershed_split(
         if asp <= max_aspect:
             if rgba is not None and _is_mostly_green(rgba, comp):
                 continue
+            if rgba is not None and _is_mostly_brown_trunk(rgba, comp):
+                continue
+            if rgba is not None and not _has_fur_colors(rgba, comp):
+                continue
+            if _contour_solidity(comp) < 0.42:
+                continue
             out.append((i, comp, (x1, y1, x2, y2)))
     if not out:
         ys, xs = np.where(mask > 0)
@@ -256,7 +313,7 @@ def extract_cutout(rgba: np.ndarray, mask: np.ndarray, padding: int = 2) -> Imag
     crop = rgba[y1:y2, x1:x2].copy()
     crop_mask = mask[y1:y2, x1:x2]
     crop[:, :, 3] = np.where(crop_mask > 0, rgba[y1:y2, x1:x2, 3], 0)
-    return Image.fromarray(crop, "RGBA")
+    return Image.fromarray(crop)
 
 
 def inpaint_background(rgba: np.ndarray, mask: np.ndarray) -> np.ndarray:
@@ -334,12 +391,12 @@ def run_pipeline(
 
         cutout = None
         # Primary: Pic2Pix-style edge sampling (no ML deps, works for centered objects)
-        refined = refine_crop_with_corner_sampling(pil, crop_bbox, tolerance=40, edge_strip=8)
+        refined = refine_crop_with_corner_sampling(pil, crop_bbox, tolerance=42, edge_strip=8)
         if refined is not None:
             arr = np.array(refined)
             fg = np.count_nonzero(arr[:, :, 3] > 128)
             crop_area = arr.shape[0] * arr.shape[1]
-            if fg >= min_animal_area and fg <= crop_area * 0.92:
+            if fg >= 120 and fg <= crop_area * 0.95:
                 cutout = refined
 
         if cutout is None and HAS_REMBG:
@@ -356,7 +413,7 @@ def run_pipeline(
 
         if cutout is None:
             continue
-        # Post-filter: reject cutouts that are mostly green (palm/foliage)
+        # Post-filter: reject cutouts that are mostly green or blue (foliage, water)
         arr = np.array(cutout)
         if arr.shape[2] >= 3:
             fg = arr[:, :, 3] > 128
@@ -364,16 +421,23 @@ def run_pipeline(
             if n_fg > 0:
                 hsv = cv2.cvtColor(arr[:, :, :3], cv2.COLOR_RGB2HSV)
                 green = (hsv[:, :, 0] >= 17) & (hsv[:, :, 0] <= 42) & (hsv[:, :, 1] > 40)
+                blue = (hsv[:, :, 0] >= 42) & (hsv[:, :, 0] <= 70)
                 n_green = np.count_nonzero(fg & green)
-                if n_green / n_fg > 0.2:
+                n_blue = np.count_nonzero(fg & blue)
+                if n_green / n_fg > 0.18 or n_blue / n_fg > 0.20:
                     continue
         cutout_path = out_dir / f"animal_{i:02d}_raw.png"
         cutout.save(cutout_path)
         cutouts.append((comp_mask, cutout))
 
-    # Inpaint background
-    print("Inpainting background...")
-    filled_bg = inpaint_background(rgba, mask)
+    # Inpaint background: only the animal regions we extracted (not palm trees, etc.)
+    print("Inpainting background (animal regions only)...")
+    animal_mask = np.zeros((h, w), dtype=np.uint8)
+    for comp_mask, _ in cutouts:
+        animal_mask = np.maximum(animal_mask, comp_mask)
+    kernel = np.ones((5, 5), np.uint8)
+    animal_mask = cv2.dilate(animal_mask, kernel)
+    filled_bg = inpaint_background(rgba, animal_mask)
     bg_pil = Image.fromarray(filled_bg)
     bg_pil.save(out_dir / "background_filled.png")
 
