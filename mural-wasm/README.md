@@ -49,7 +49,7 @@ Open http://127.0.0.1:8765/index.html. Assets at `/assets/*` resolve from `mural
 ## Features
 
 - **Claymation (preferred)**: Python crop-then-rembg pipeline extracts animals from mural
-- **Fallback**: 4×3 sprite sheet (Cat, Dog, GuineaPig) when claymation not available
+- **Fallback**: CC0 pixel art (CatnDog + Kenney rabbit) 4×3 sprite sheet when claymation not available
 - **Pet entities**: Wandering, Interacting, Exodus
 - **Proximity detection**: Same species within 30px → Interaction (sprite mode)
 - **Scroll-triggered scenes**: Cozy Nook, Winter Tubing, Doggy Door
@@ -57,7 +57,7 @@ Open http://127.0.0.1:8765/index.html. Assets at `/assets/*` resolve from `mural
 
 ## Assets
 
-`build-standalone.sh` runs the Python claymation pipeline when `rembg` is installed. Output: `claymation_spritesheet.png`, `claymation_meta.json`. Falls back to `1000003453.png` otherwise.
+`build-standalone.sh` runs the Python claymation pipeline when `rembg` is installed. Output: `claymation_spritesheet.png`, `claymation_meta.json`. Falls back to `pets_spritesheet.png` (CC0: CatnDog pzUH + Kenney rabbit) otherwise.
 
 ## Claymation pipeline (original mural animals)
 

@@ -1,4 +1,10 @@
-# Mural Claymation Pipeline
+# Mural Scripts
+
+## fetch_pixel_art.py
+
+Fetches CC0 pixel art (CatnDog pzUH + Kenney Animal Pack) and builds `pets_spritesheet.png` (4×3: Cat walk, Dog walk, Rabbit×4). Run from `mural-wasm/scripts/` or via `build-standalone.sh`.
+
+## claymation_pipeline.py
 
 Extracts animals from the mural using **Pic2Pix-style edge sampling**: color-based candidate regions → crop each → sample edge strips → mask out background colors → clean cutout. No ML deps for primary path; rembg optional fallback.
 

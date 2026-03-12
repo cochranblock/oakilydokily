@@ -10,6 +10,11 @@ mkdir -p "$OAKILY/mural-wasm/assets"
 MURAL="$OAKILY/assets/mural.png"
 CLAY_OUT="$OAKILY/mural-wasm/assets/claymation_out"
 
+# Fetch CC0 pixel art (CatnDog + Kenney) as fallback when claymation unavailable
+if [ ! -f "$OAKILY/mural-wasm/assets/pets_spritesheet.png" ]; then
+  (cd "$SCRIPT_DIR/scripts" && python3 fetch_pixel_art.py 2>/dev/null) || true
+fi
+
 if [ -f "$MURAL" ] && python3 -c "import rembg" 2>/dev/null; then
   echo "Running claymation pipeline (crop-then-rembg)..."
   (cd "$SCRIPT_DIR/scripts" && python3 claymation_pipeline.py ../../assets/mural.png -o ../assets/claymation_out --pixel-scale 1.0 2>/dev/null) || true
@@ -21,5 +26,5 @@ fi
 
 cargo build --target wasm32-unknown-unknown -p mural-wasm --release
 cp "$WS_ROOT/target/wasm32-unknown-unknown/release/mural-wasm.wasm" "$OAKILY/mural-wasm/"
-cp "$OAKILY/assets/mural.png" "$OAKILY/assets/1000003453.png" "$OAKILY/mural-wasm/assets/" 2>/dev/null || true
+cp "$OAKILY/assets/mural.png" "$OAKILY/mural-wasm/assets/" 2>/dev/null || true
 echo "Built. Run ./serve.sh from mural-wasm/ to serve."

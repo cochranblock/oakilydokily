@@ -12,3 +12,6 @@ mural-wasm/assets/
 # claymation pipeline output
 mural-wasm/scripts/out_claymation/
 mural-wasm/scripts/out_rust/
+
+# pixel art fetch cache (CatnDog, Kenney)
+mural-wasm/scripts/.pixel_art_cache/

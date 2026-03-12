@@ -43,7 +43,7 @@ fn window_conf() -> Conf {
 async fn main() {
     let landscape = landscape::load("/assets/mural.png").await;
     let claymation = ClaymationSheet::load().await;
-    let sprite_sheet = SpriteSheet::load("/assets/1000003453.png").await;
+    let sprite_sheet = SpriteSheet::load("/assets/pets_spritesheet.png").await;
     let atlas = TextureAtlas::from_sheet(&sprite_sheet);
 
     let (mw, mh) = landscape
