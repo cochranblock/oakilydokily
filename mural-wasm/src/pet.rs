@@ -1,9 +1,14 @@
 // Unlicense — cochranblock.org
-// Contributors: mattbusel (XFactor), GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
-//! Pet entity: Wandering, Sleeping, Interacting. Proximity detection. Guinea Pig kiss + hearts.
+// Pet: claymation animal or fallback Cat/Dog/GuineaPig.
 
 use macroquad::prelude::*;
-use crate::sprites::{TextureAtlas, Species, Animation};
+use crate::sprites::{ClaymationSheet, TextureAtlas, Species, Animation};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PetKind {
+    Claymation(u32),
+    Sprite(Species),
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PetState {
@@ -14,7 +19,7 @@ pub enum PetState {
 }
 
 pub struct Pet {
-    pub species: Species,
+    pub kind: PetKind,
     pub pos: Vec2,
     pub vel: Vec2,
     pub state: PetState,
@@ -31,9 +36,22 @@ struct HeartParticle {
 }
 
 impl Pet {
-    pub fn new(species: Species, pos: Vec2, _atlas: &TextureAtlas) -> Self {
+    pub fn claymation(animal: u32, pos: Vec2) -> Self {
         Pet {
-            species,
+            kind: PetKind::Claymation(animal),
+            pos,
+            vel: vec2(20., 0.),
+            state: PetState::Wandering,
+            anim_frame: 0,
+            anim_timer: 0.,
+            interaction_timer: 0.,
+            hearts: vec![],
+        }
+    }
+
+    pub fn sprite(species: Species, pos: Vec2, _atlas: &TextureAtlas) -> Self {
+        Pet {
+            kind: PetKind::Sprite(species),
             pos,
             vel: vec2(20., 0.),
             state: PetState::Wandering,
@@ -57,7 +75,14 @@ impl Pet {
         self.vel = vec2(-80., 0.);
     }
 
-    pub fn update(&mut self, dt: f32, _atlas: &TextureAtlas, mural_w: f32, _mural_h: f32) {
+    pub fn same_kind(&self, other: &Pet) -> bool {
+        match (&self.kind, &other.kind) {
+            (PetKind::Sprite(a), PetKind::Sprite(b)) => a == b,
+            _ => false,
+        }
+    }
+
+    pub fn update(&mut self, dt: f32, mural_w: f32, _mural_h: f32) {
         self.anim_timer += dt;
         if self.anim_timer > 0.15 {
             self.anim_timer = 0.;
@@ -81,9 +106,7 @@ impl Pet {
                 }
             }
             PetState::Sleeping => {}
-            PetState::Exodus => {
-                self.pos += self.vel * dt;
-            }
+            PetState::Exodus => self.pos += self.vel * dt,
         }
 
         self.hearts.retain_mut(|h| {
@@ -94,10 +117,36 @@ impl Pet {
         });
     }
 
-    pub fn draw(&self, atlas: &TextureAtlas, scale: f32, ox: f32, oy: f32) {
+    pub fn draw_claymation(&self, sheet: &ClaymationSheet, scale: f32, ox: f32, oy: f32) {
         if self.state == PetState::Exodus && self.pos.x < -50. {
             return;
         }
+        let PetKind::Claymation(animal) = self.kind else { return };
+        let s = scale;
+        let x = ox + self.pos.x * s;
+        let y = oy + self.pos.y * s;
+        let rot = if self.vel.x >= 0. { 0 } else { 2 };
+        let uv = sheet.frame(animal, rot);
+        let w = uv.w * s;
+        let h = uv.h * s;
+        draw_texture_ex(
+            &sheet.texture,
+            x - w / 2.,
+            y - h,
+            WHITE,
+            DrawTextureParams {
+                dest_size: Some(vec2(w, h)),
+                source: Some(uv),
+                ..Default::default()
+            },
+        );
+    }
+
+    pub fn draw_sprite(&self, atlas: &TextureAtlas, scale: f32, ox: f32, oy: f32) {
+        if self.state == PetState::Exodus && self.pos.x < -50. {
+            return;
+        }
+        let PetKind::Sprite(species) = self.kind else { return };
         let s = scale;
         let x = ox + self.pos.x * s;
         let y = oy + self.pos.y * s;
@@ -107,7 +156,7 @@ impl Pet {
             PetState::Wandering | PetState::Exodus => Animation::Walk,
             PetState::Sleeping => Animation::Sleeping,
             PetState::Interacting => {
-                if self.species == Species::GuineaPig {
+                if species == Species::GuineaPig {
                     let uv = atlas.kiss_frame(self.anim_frame);
                     draw_texture_ex(
                         atlas.texture(),
@@ -121,16 +170,14 @@ impl Pet {
                         },
                     );
                     for h in &self.hearts {
-                        let hx = ox + h.pos.x * s;
-                        let hy = oy + h.pos.y * s;
-                        draw_circle(hx, hy, 4. * s, RED);
+                        draw_circle(ox + h.pos.x * s, oy + h.pos.y * s, 4. * s, RED);
                     }
                     return;
                 }
                 Animation::Interaction
             }
         };
-        let uv = atlas.frame(self.species, anim, self.anim_frame);
+        let uv = atlas.frame(species, anim, self.anim_frame);
         draw_texture_ex(
             atlas.texture(),
             x - w / 2.,

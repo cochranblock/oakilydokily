@@ -48,18 +48,16 @@ Open http://127.0.0.1:8765/index.html. Assets at `/assets/*` resolve from `mural
 
 ## Features
 
-- **SpriteSheet**: 4×3 grid (1000003453.png)
-- **TextureAtlas**: Cats row 0, Dogs row 1, Guinea Pigs row 2; Walk, Interaction, Sleeping, Kiss
-- **Pet entities**: Wandering, Sleeping, Interacting states
-- **Proximity detection**: Same species within 30px → Interaction
-- **Guinea Pig kiss**: Heart particles
-- **Scroll-triggered scenes**: Cozy Nook, Winter Tubing, Doggy Door (footer)
-- **JS bridge**: `mural_set_scroll_y(y)`, `mural_set_mouse(x, y)`
+- **Claymation (preferred)**: Python crop-then-rembg pipeline extracts animals from mural
+- **Fallback**: 4×3 sprite sheet (Cat, Dog, GuineaPig) when claymation not available
+- **Pet entities**: Wandering, Interacting, Exodus
+- **Proximity detection**: Same species within 30px → Interaction (sprite mode)
+- **Scroll-triggered scenes**: Cozy Nook, Winter Tubing, Doggy Door
 - **FilterMode::Nearest**: Crisp 8-bit pixels
 
 ## Assets
 
-Place `mural.png` and `1000003453.png` in `assets/`. `build-standalone.sh` copies them from `oakilydokily/assets/`.
+`build-standalone.sh` runs the Python claymation pipeline when `rembg` is installed. Output: `claymation_spritesheet.png`, `claymation_meta.json`. Falls back to `1000003453.png` otherwise.
 
 ## Claymation pipeline (original mural animals)
 

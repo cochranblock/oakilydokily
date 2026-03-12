@@ -6,6 +6,7 @@
 import argparse
 import sys
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 from PIL import Image
@@ -48,6 +49,19 @@ def segment_foreground_rembg(pil_img: Image.Image) -> np.ndarray:
     return mask
 
 
+def refine_crop_with_rembg(pil_img: Image.Image, crop_bbox: tuple) -> Optional[Image.Image]:
+    """Crop image to bbox, run rembg on crop. Returns RGBA with clean foreground. rembg works best when object is main subject."""
+    x1, y1, x2, y2 = crop_bbox
+    crop = pil_img.crop((x1, y1, x2, y2))
+    if crop.size[0] < 8 or crop.size[1] < 8:
+        return None
+    try:
+        out = remove(crop)
+        return out
+    except Exception:
+        return None
+
+
 def segment_foreground_grabcut(rgba: np.ndarray) -> np.ndarray:
     """Fallback: OpenCV GrabCut for foreground segmentation."""
     rgb = cv2.cvtColor(rgba[:, :, :3], cv2.COLOR_RGB2BGR)
@@ -77,17 +91,15 @@ def segment_foreground(pil_img: Image.Image, rgba: np.ndarray) -> np.ndarray:
 
 
 def _segment_animals_by_color(rgba: np.ndarray) -> np.ndarray:
-    """Extract animal-like regions: not grass (green), not water (blue). OpenCV H in 0-180."""
+    """Extract animal-like regions: not grass, water, or soil. OpenCV H in 0-180."""
     rgb = rgba[:, :, :3]
     hsv = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)
     h, s, v = hsv[:, :, 0], hsv[:, :, 1], hsv[:, :, 2]
-    # Grass: H 35-85 (OpenCV half) -> 17-42
     green = (h >= 17) & (h <= 42) & (s > 40)
-    # Water: H 90-130 -> 45-65
     blue = (h >= 45) & (h <= 65)
-    # Very low sat = grey/white
-    background = green | blue | (s < 25)
-    animal_candidates = ~background & (v > 30)  # Not dark
+    soil = ((h <= 15) | (h >= 170)) & (s > 45) & (v < 140)
+    background = green | blue | soil | (s < 25)
+    animal_candidates = ~background & (v > 30)
     mask = animal_candidates.astype(np.uint8) * 255
     kernel = np.ones((3, 3), np.uint8)
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
@@ -95,33 +107,69 @@ def _segment_animals_by_color(rgba: np.ndarray) -> np.ndarray:
     return mask
 
 
-def connected_components(mask: np.ndarray, min_area: int = 200) -> list[tuple[int, np.ndarray]]:
-    """Find connected components. If one huge blob, try watershed to split."""
+def _is_mostly_green(rgba: np.ndarray, comp_mask: np.ndarray, thresh: float = 0.35) -> bool:
+    """True if >thresh of masked pixels are green (palm fronds, grass)."""
+    rgb = rgba[:, :, :3]
+    hsv = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)
+    h, s = hsv[:, :, 0], hsv[:, :, 1]
+    green = (h >= 17) & (h <= 42) & (s > 40)
+    masked = comp_mask > 0
+    n_masked = np.count_nonzero(masked)
+    if n_masked == 0:
+        return False
+    n_green = np.count_nonzero(masked & green)
+    return n_green / n_masked >= thresh
+
+
+def connected_components(
+    mask: np.ndarray,
+    rgba: np.ndarray,
+    min_area: int = 200,
+    max_area: int = 12000,
+    max_aspect: float = 2.2,
+) -> list[tuple[int, np.ndarray, tuple[int, int, int, int]]]:
+    """Find connected components. Returns (label, comp_mask, (x1,y1,x2,y2))."""
     num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
     components = []
     for i in range(1, num_labels):
         area = stats[i, cv2.CC_STAT_AREA]
-        if area < min_area:
+        if area < min_area or area > max_area:
+            continue
+        x1 = stats[i, cv2.CC_STAT_LEFT]
+        y1 = stats[i, cv2.CC_STAT_TOP]
+        bw = stats[i, cv2.CC_STAT_WIDTH]
+        bh = stats[i, cv2.CC_STAT_HEIGHT]
+        x2, y2 = x1 + bw, y1 + bh
+        aspect = max(bw, bh) / (min(bw, bh) or 1)
+        if aspect > max_aspect:
             continue
         comp_mask = (labels == i).astype(np.uint8) * 255
-        # If single huge component (whole scene), try watershed to get individual animals
+        if _is_mostly_green(rgba, comp_mask):
+            continue
         if area > mask.size * 0.2 and num_labels == 2:
-            split = _watershed_split(comp_mask, min_area)
+            split = _watershed_split(comp_mask, min_area, max_area, max_aspect, rgba)
             return split
-        components.append((i, comp_mask))
-    return components if components else [(1, mask)]
+        components.append((i, comp_mask, (x1, y1, x2, y2)))
+    return components if components else [(1, mask, (0, 0, mask.shape[1], mask.shape[0]))]
 
 
-def _watershed_split(mask: np.ndarray, min_area: int) -> list[tuple[int, np.ndarray]]:
+def _watershed_split(
+    mask: np.ndarray,
+    min_area: int,
+    max_area: int = 12000,
+    max_aspect: float = 2.2,
+    rgba: Optional[np.ndarray] = None,
+) -> list[tuple[int, np.ndarray, tuple[int, int, int, int]]]:
     """Use distance transform + watershed to split one blob into many."""
     dist = cv2.distanceTransform(mask, cv2.DIST_L2, 5)
     dist_uint8 = np.uint8(np.clip(dist / (dist.max() or 1) * 255, 0, 255))
-    # Lower threshold = more markers = more splits
     _, sure_fg = cv2.threshold(dist_uint8, 0.15 * (dist_uint8.max() or 1), 255, 0)
     sure_fg = np.uint8(sure_fg)
     num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(sure_fg, connectivity=8)
     if num_labels < 3:
-        return [(1, mask)]
+        ys, xs = np.where(mask > 0)
+        bbox = (xs.min(), ys.min(), xs.max() + 1, ys.max() + 1) if len(xs) else (0, 0, 0, 0)
+        return [(1, mask, bbox)]
     out = []
     for i in range(1, num_labels):
         comp = (labels == i).astype(np.uint8) * 255
@@ -129,9 +177,23 @@ def _watershed_split(mask: np.ndarray, min_area: int) -> list[tuple[int, np.ndar
         comp = cv2.dilate(comp, kernel)
         comp = cv2.bitwise_and(comp, mask)
         area = np.count_nonzero(comp)
-        if min_area <= area <= mask.size * 0.15:  # Skip tiny and huge
-            out.append((i, comp))
-    return out if out else [(1, mask)]
+        if not (min_area <= area <= min(max_area, int(mask.size * 0.15))):
+            continue
+        ys, xs = np.where(comp > 0)
+        if len(xs) == 0:
+            continue
+        x1, x2 = xs.min(), xs.max() + 1
+        y1, y2 = ys.min(), ys.max() + 1
+        asp = max(x2 - x1, y2 - y1) / (min(x2 - x1, y2 - y1) or 1)
+        if asp <= max_aspect:
+            if rgba is not None and _is_mostly_green(rgba, comp):
+                continue
+            out.append((i, comp, (x1, y1, x2, y2)))
+    if not out:
+        ys, xs = np.where(mask > 0)
+        bbox = (xs.min(), ys.min(), xs.max() + 1, ys.max() + 1) if len(xs) else (0, 0, 0, 0)
+        return [(1, mask, bbox)]
+    return out
 
 
 def extract_cutout(rgba: np.ndarray, mask: np.ndarray, padding: int = 2) -> Image.Image:
@@ -194,7 +256,8 @@ def run_pipeline(
     out_dir: Path,
     num_rotations: int = 4,
     pixel_scale: float = 0.25,
-    min_animal_area: int = 150,
+    min_animal_area: int = 200,
+    max_animal_area: int = 12000,
 ) -> None:
     ensure_deps()
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -202,18 +265,38 @@ def run_pipeline(
     rgba, pil = load_image(mural_path)
     h, w = rgba.shape[:2]
 
-    print("Segmenting foreground...")
-    mask = segment_foreground(pil, rgba)
+    print("Segmenting foreground (color-based)...")
+    mask = _segment_animals_by_color(rgba)
     cv2.imwrite(str(out_dir / "mask_full.png"), mask)
 
-    print("Finding animal components...")
-    components = connected_components(mask, min_area=min_animal_area)
-    print(f"Found {len(components)} animal regions")
+    print("Finding animal components (crop-then-rembg)...")
+    components = connected_components(
+        mask, rgba, min_area=min_animal_area, max_area=max_animal_area, max_aspect=2.2
+    )
+    print(f"Found {len(components)} candidate regions")
 
-    # Extract cutouts
     cutouts = []
-    for i, (_, comp_mask) in enumerate(components):
-        cutout = extract_cutout(rgba, comp_mask)
+    for i, (_, comp_mask, (x1, y1, x2, y2)) in enumerate(components):
+        pad = max(24, int(0.4 * max(x2 - x1, y2 - y1)))
+        cx1 = max(0, x1 - pad)
+        cy1 = max(0, y1 - pad)
+        cx2 = min(w, x2 + pad)
+        cy2 = min(h, y2 + pad)
+        crop_bbox = (cx1, cy1, cx2, cy2)
+
+        cutout = None
+        if HAS_REMBG:
+            refined = refine_crop_with_rembg(pil, crop_bbox)
+            if refined is not None:
+                arr = np.array(refined)
+                if np.count_nonzero(arr[:, :, 3] > 128) >= min_animal_area:
+                    cutout = refined
+
+        if cutout is None:
+            cutout_pil = extract_cutout(rgba, comp_mask, padding=4)
+            if cutout_pil is not None:
+                cutout = cutout_pil
+
         if cutout is None:
             continue
         cutout_path = out_dir / f"animal_{i:02d}_raw.png"
@@ -238,13 +321,12 @@ def run_pipeline(
 
     # Composite sample frame: place pixelated animals back at original positions
     print("Compositing sample frame...")
-    ys, xs = np.where(mask > 0)
-    # Use centroid of each component for placement
     placements = []
-    for i, (_, comp_mask) in enumerate(components):
+    for i, (comp_mask, _) in enumerate(cutouts):
         ys_c, xs_c = np.where(comp_mask > 0)
+        if len(xs_c) == 0:
+            continue
         cx, cy = int(xs_c.mean()), int(ys_c.mean())
-        # Load pixelated version (angle 0)
         sprite = Image.open(out_dir / f"animal_{i:02d}_rot00.png")
         sw, sh = sprite.size
         placements.append((cx - sw // 2, cy - sh // 2, sprite))
@@ -287,6 +369,9 @@ def _build_sprite_sheet(out_dir: Path, num_animals: int, num_rots: int, max_cell
         for c, img in enumerate(row):
             sheet.paste(img, (c * max_w, r * max_h), img)
     sheet.save(out_dir / "claymation_spritesheet.png")
+    meta = {"rows": rows, "cols": cols, "cell_w": max_w, "cell_h": max_h}
+    import json
+    (out_dir / "claymation_meta.json").write_text(json.dumps(meta))
     print(f"Sprite sheet: {cols}×{rows} cells, {max_w}×{max_h} each")
 
 
@@ -295,8 +380,9 @@ def main():
     parser.add_argument("mural", type=Path, nargs="?", default=Path("../../assets/mural.png"))
     parser.add_argument("-o", "--out", type=Path, default=Path("out_claymation"))
     parser.add_argument("--rotations", type=int, default=4)
-    parser.add_argument("--pixel-scale", type=float, default=0.25)
-    parser.add_argument("--min-area", type=int, default=150)
+    parser.add_argument("--pixel-scale", type=float, default=1.0)
+    parser.add_argument("--min-area", type=int, default=200)
+    parser.add_argument("--max-area", type=int, default=12000)
     args = parser.parse_args()
 
     script_dir = Path(__file__).resolve().parent
@@ -318,6 +404,7 @@ def main():
         num_rotations=args.rotations,
         pixel_scale=args.pixel_scale,
         min_animal_area=args.min_area,
+        max_animal_area=args.max_area,
     )
 
 
