@@ -20,37 +20,16 @@ fn f70(p0: &str, p1: &str, p2: &str, p3: &str) -> String {
 
 const FOOTER: &str = r##"</main><footer class="footer"><nav class="footer-nav"><a href="/">Home</a><a href="/about">About</a><a href="/contact">Contact</a><a href="/waiver">Waiver</a></nav><p>&copy; 2026 OakilyDokily</p><p class="footer-cta"><a href="mailto:byrdkaylie34@gmail.com?subject=OakilyDokily%20Inquiry" class="btn btn-primary">Get in Touch</a></p></footer><script>(function(){var t=document.querySelector('.nav-toggle');var n=document.getElementById('nav-links');if(t&&n){t.onclick=function(){var o=n.classList.toggle('nav-open');t.setAttribute('aria-expanded',o);}}}());</script></body></html>"##;
 
-/// f73 = hero cover — interactive WASM mural with static fallback
+/// f73 = hero cover — static mural (WASM removed)
 fn f73() -> String {
     r#"<div class="hero-cover" aria-hidden="true">
-          <img src="/assets/mural.png" alt="" class="hero-cover-img" id="mural-fallback" width="1200" height="400">
-          <canvas id="glcanvas" tabindex="-1" style="position:absolute;top:0;left:0;width:100%;height:100%;display:none;image-rendering:pixelated;"></canvas>
+          <img src="/assets/mural.png" alt="" class="hero-cover-img" width="1200" height="400">
         </div>"#.to_string()
 }
 
-/// f73b = mural scripts — gl.js + bridge + loader, appended before </body>
+/// f73b = no-op (WASM mural removed)
 fn f73b() -> &'static str {
-    r#"<script src="/assets/gl.js"></script>
-<script src="/assets/mural-bridge.js"></script>
-<script>
-(function(){
-  var c=document.getElementById('glcanvas');
-  var fb=document.getElementById('mural-fallback');
-  if(!c||typeof load!=='function'){return;}
-  var p=c.parentElement;
-  var dpr=window.devicePixelRatio||1;
-  var w=p.offsetWidth, h=p.offsetHeight;
-  c.width=Math.round(w*dpr);
-  c.height=Math.round(h*dpr);
-  c.style.width=w+'px';
-  c.style.height=h+'px';
-  window.mural_ready=function(){
-    c.style.display='block';
-    if(fb)fb.style.display='none';
-  };
-  load('/assets/mural-wasm.wasm');
-})();
-</script>"#
+    ""
 }
 
 /// f104 = home. GET /. Hero with 8-bit island cover, auth link.
