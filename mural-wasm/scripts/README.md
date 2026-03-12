@@ -4,6 +4,10 @@
 
 Fetches CC0 pixel art (CatnDog pzUH) and builds `pets_spritesheet.png` (4×3: Cat walk, Dog walk, Guinea pig). Guinea pig is an embedded minimal sprite. Run from `mural-wasm/scripts/` or via `build-standalone.sh`.
 
+## background_only.py
+
+Creates `background.png` (mural with animals inpainted out). No rembg. Run before build so pet sprites overlay a clean background.
+
 ## claymation_pipeline.py
 
 Extracts animals from the mural using **Pic2Pix-style edge sampling**: color-based candidate regions → crop each → sample edge strips → mask out background colors → clean cutout. No ML deps for primary path; rembg optional fallback.

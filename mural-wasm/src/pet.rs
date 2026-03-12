@@ -150,8 +150,8 @@ impl Pet {
         let s = scale;
         let x = ox + self.pos.x * s;
         let y = oy + self.pos.y * s;
-        let w = 32. * s;
-        let h = 48. * s;
+        let w = 48. * s;
+        let h = 56. * s;
         let anim = match self.state {
             PetState::Wandering | PetState::Exodus => Animation::Walk,
             PetState::Sleeping => Animation::Sleeping,

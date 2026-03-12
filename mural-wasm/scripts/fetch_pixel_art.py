@@ -20,33 +20,41 @@ CATNDOG_URL = "https://opengameart.org/sites/default/files/CatnDog.zip"
 
 
 def draw_guinea_pig_cell() -> Image.Image:
-    """Minimal CC0-style guinea pig: round body, small ears, 64x64."""
+    """Cute pixel-art guinea pig, side view, 64x64. Matches CatnDog style."""
     img = Image.new("RGBA", (CELL_W, CELL_H), (0, 0, 0, 0))
     px = img.load()
-    # Brown/tan palette
-    dark = (139, 90, 43, 255)
-    mid = (180, 130, 70, 255)
-    light = (210, 170, 120, 255)
-    # Round body (ellipse)
-    for y in range(20, 56):
-        for x in range(16, 48):
-            dx, dy = (x - 32) / 16, (y - 38) / 18
-            if dx * dx + dy * dy < 1.0:
-                px[x, y] = mid if (x + y) % 4 < 2 else light
-    # Head
-    for y in range(12, 28):
-        for x in range(20, 44):
-            if (x - 32) ** 2 / 64 + (y - 20) ** 2 / 36 < 1:
-                px[x, y] = light if y < 22 else mid
-    # Ears
-    for (ex, ey) in [(18, 14), (46, 14)]:
-        for dy in range(6):
-            for dx in range(-2, 3):
-                if abs(dx) + dy < 4:
-                    px[ex + dx, ey + dy] = mid
-    # Eye dots
-    px[26, 22] = (40, 25, 15, 255)
-    px[38, 22] = (40, 25, 15, 255)
+    # Palette: warm browns, cream
+    outline = (80, 50, 30, 255)
+    dark = (140, 95, 55, 255)
+    mid = (185, 140, 90, 255)
+    light = (220, 190, 150, 255)
+    cream = (245, 230, 210, 255)
+    eye = (30, 20, 10, 255)
+
+    def oval(cx: int, cy: int, rx: int, ry: int, color: tuple) -> None:
+        for y in range(max(0, cy - ry), min(CELL_H, cy + ry + 1)):
+            for x in range(max(0, cx - rx), min(CELL_W, cx + rx + 1)):
+                if ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1:
+                    px[x, y] = color
+
+    # Body (compact oval, bottom)
+    oval(32, 42, 18, 14, mid)
+    oval(32, 42, 14, 10, light)
+    # Head (round, front)
+    oval(32, 28, 14, 12, light)
+    oval(32, 28, 10, 8, cream)
+    # Snout
+    oval(38, 28, 6, 5, cream)
+    # Ears (small rounded)
+    oval(22, 18, 5, 4, mid)
+    oval(42, 18, 5, 4, mid)
+    # Eyes
+    px[28, 26] = eye
+    px[36, 26] = eye
+    # Outline hint on body
+    for (x, y) in [(16, 38), (48, 38), (20, 52), (44, 52)]:
+        if 0 <= x < CELL_W and 0 <= y < CELL_H:
+            px[x, y] = outline
     return img
 
 
