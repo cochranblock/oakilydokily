@@ -12,7 +12,7 @@ mod pet;
 mod scenes;
 
 use bridge::{get_scroll_x, get_scroll_y};
-use sprites::{ClaymationSheet, SpriteSheet, TextureAtlas, Species};
+use sprites::{ClaymationSheet, Species};
 use pet::{Pet, PetKind, PetState};
 use scenes::SceneState;
 
@@ -43,8 +43,6 @@ fn window_conf() -> Conf {
 async fn main() {
     let landscape = landscape::load("/assets/mural.png").await;
     let claymation = ClaymationSheet::load().await;
-    let sprite_sheet = SpriteSheet::load("/assets/pets_spritesheet.png").await;
-    let atlas = TextureAtlas::from_sheet(&sprite_sheet);
 
     let (mw, mh) = landscape
         .as_ref()
@@ -63,11 +61,7 @@ async fn main() {
             })
             .collect()
     } else {
-        vec![
-            Pet::sprite(Species::Cat, vec2(mw * 0.15, mh * 0.55), &atlas),
-            Pet::sprite(Species::Dog, vec2(mw * 0.45, mh * 0.50), &atlas),
-            Pet::sprite(Species::GuineaPig, vec2(mw * 0.70, mh * 0.52), &atlas),
-        ]
+        vec![]  // No sprite fallback — show mural only
     };
 
     let mut scene = SceneState::default();
@@ -125,40 +119,30 @@ async fn main() {
         let (screen_w, screen_h) = (screen_width(), screen_height());
         clear_background(Color::from_rgba(0x1a, 0x1a, 0x2e, 255));
 
-        let (scale, ox, oy) = if claymation.is_some() && landscape.is_some() {
-            let (_, _, s, x, y) = mural_layout(landscape.as_ref().unwrap(), screen_w, screen_h);
-            if let Some(ref tex) = landscape {
-                let draw_w = tex.width() * s;
-                let draw_h = tex.height() * s;
-                draw_texture_ex(
-                    tex,
-                    x,
-                    y,
-                    WHITE,
-                    DrawTextureParams {
-                        dest_size: Some(vec2(draw_w, draw_h)),
-                        ..Default::default()
-                    },
-                );
-            }
-            scene.draw();
-            (s, x, y)
-        } else {
-            scene.draw();
-            let fit = (screen_w / mw).min(screen_h / mh);
-            let s = if fit >= 1. { fit.floor().max(1.) } else { fit };
-            let draw_w = mw * s;
-            let draw_h = mh * s;
-            (s, (screen_w - draw_w) / 2., (screen_h - draw_h) / 2.)
-        };
+        if let Some(ref tex) = landscape {
+            let (_, _, s, x, y) = mural_layout(tex, screen_w, screen_h);
+            let draw_w = tex.width() * s;
+            let draw_h = tex.height() * s;
+            draw_texture_ex(
+                tex,
+                x,
+                y,
+                WHITE,
+                DrawTextureParams {
+                    dest_size: Some(vec2(draw_w, draw_h)),
+                    ..Default::default()
+                },
+            );
+        }
+        scene.draw();
 
         if let Some(ref sheet) = claymation {
+            let (_, _, s, x, y) = landscape
+                .as_ref()
+                .map(|t| mural_layout(t, screen_w, screen_h))
+                .unwrap_or((mw, mh, 1., 0., 0.));
             for &i in &visible {
-                pets[i].draw_claymation(sheet, scale, ox, oy);
-            }
-        } else {
-            for &i in &visible {
-                pets[i].draw_sprite(&atlas, scale, ox, oy);
+                pets[i].draw_claymation(sheet, s, x, y);
             }
         }
 
