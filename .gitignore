@@ -13,5 +13,5 @@ mural-wasm/assets/
 mural-wasm/scripts/out_claymation/
 mural-wasm/scripts/out_rust/
 
-# pixel art fetch cache (CatnDog, Kenney)
+# pixel art fetch cache (CatnDog)
 mural-wasm/scripts/.pixel_art_cache/

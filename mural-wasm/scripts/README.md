@@ -2,7 +2,7 @@
 
 ## fetch_pixel_art.py
 
-Fetches CC0 pixel art (CatnDog pzUH + Kenney Animal Pack) and builds `pets_spritesheet.png` (4×3: Cat walk, Dog walk, Rabbit×4). Run from `mural-wasm/scripts/` or via `build-standalone.sh`.
+Fetches CC0 pixel art (CatnDog pzUH) and builds `pets_spritesheet.png` (4×3: Cat walk, Dog walk, Guinea pig). Guinea pig is an embedded minimal sprite. Run from `mural-wasm/scripts/` or via `build-standalone.sh`.
 
 ## claymation_pipeline.py
 

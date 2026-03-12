@@ -17,7 +17,37 @@ COLS = 4
 ROWS = 3
 
 CATNDOG_URL = "https://opengameart.org/sites/default/files/CatnDog.zip"
-KENNEY_URL = "https://kenney.nl/media/pages/assets/animal-pack/f6c9bf503d-1677669996/kenney_animal-pack.zip"
+
+
+def draw_guinea_pig_cell() -> Image.Image:
+    """Minimal CC0-style guinea pig: round body, small ears, 64x64."""
+    img = Image.new("RGBA", (CELL_W, CELL_H), (0, 0, 0, 0))
+    px = img.load()
+    # Brown/tan palette
+    dark = (139, 90, 43, 255)
+    mid = (180, 130, 70, 255)
+    light = (210, 170, 120, 255)
+    # Round body (ellipse)
+    for y in range(20, 56):
+        for x in range(16, 48):
+            dx, dy = (x - 32) / 16, (y - 38) / 18
+            if dx * dx + dy * dy < 1.0:
+                px[x, y] = mid if (x + y) % 4 < 2 else light
+    # Head
+    for y in range(12, 28):
+        for x in range(20, 44):
+            if (x - 32) ** 2 / 64 + (y - 20) ** 2 / 36 < 1:
+                px[x, y] = light if y < 22 else mid
+    # Ears
+    for (ex, ey) in [(18, 14), (46, 14)]:
+        for dy in range(6):
+            for dx in range(-2, 3):
+                if abs(dx) + dy < 4:
+                    px[ex + dx, ey + dy] = mid
+    # Eye dots
+    px[26, 22] = (40, 25, 15, 255)
+    px[38, 22] = (40, 25, 15, 255)
+    return img
 
 
 def fetch_zip(url: str, dest: Path) -> Path:
@@ -37,7 +67,7 @@ def fetch_zip(url: str, dest: Path) -> Path:
     return dest
 
 
-def build_sprite_sheet(out_path: Path, catndog_dir: Path, kenney_dir: Path) -> None:
+def build_sprite_sheet(out_path: Path, catndog_dir: Path) -> None:
     sheet = Image.new("RGBA", (COLS * CELL_W, ROWS * CELL_H), (0, 0, 0, 0))
 
     def paste_cell(img: Image.Image, col: int, row: int) -> None:
@@ -64,12 +94,10 @@ def build_sprite_sheet(out_path: Path, catndog_dir: Path, kenney_dir: Path) -> N
         if f.exists():
             paste_cell(Image.open(f), i, 1)
 
-    # Row 2: Rabbit (Kenney, CC0) as guinea pig substitute, repeated 4x
-    rabbit_path = kenney_dir / "PNG" / "Round" / "rabbit.png"
-    if rabbit_path.exists():
-        rabbit = Image.open(rabbit_path).convert("RGBA")
-        for i in range(4):
-            paste_cell(rabbit, i, 2)
+    # Row 2: Guinea pig (embedded minimal sprite, repeated 4x)
+    gp = draw_guinea_pig_cell()
+    for i in range(4):
+        sheet.paste(gp, (i * CELL_W, 2 * CELL_H), gp)
 
     sheet.save(out_path)
     print(f"Wrote {out_path}")
@@ -102,18 +130,7 @@ def main() -> None:
         print("CatnDog not found", file=sys.stderr)
         sys.exit(1)
 
-    kenney = find_dir_containing(cache, Path("PNG/Round/rabbit.png"))
-    if not kenney:
-        print("Fetching Kenney Animal Pack (CC0)...")
-        kdir = cache / "kenney_dl"
-        kdir.mkdir(parents=True, exist_ok=True)
-        fetch_zip(KENNEY_URL, kdir)
-        kenney = find_dir_containing(kdir, Path("PNG/Round/rabbit.png"))
-    if not kenney or not (kenney / "PNG" / "Round" / "rabbit.png").exists():
-        print("Kenney animal pack not found", file=sys.stderr)
-        sys.exit(1)
-
-    build_sprite_sheet(out_path, catndog, kenney)
+    build_sprite_sheet(out_path, catndog)
     print("Done. pets_spritesheet.png ready.")
 
 
