@@ -30,7 +30,7 @@ def ensure_deps():
         print("Install opencv: pip install opencv-python", file=sys.stderr)
         sys.exit(1)
     if not HAS_REMBG:
-        print("Note: rembg not installed; using GrabCut (pip install rembg for better segmentation)")
+        print("Note: rembg not installed; using corner-sampling + color-mask (pip install rembg for fallback)")
 
 
 def load_image(path: Path) -> tuple[np.ndarray, Image.Image]:
@@ -47,6 +47,54 @@ def segment_foreground_rembg(pil_img: Image.Image) -> np.ndarray:
     alpha = np.array(out.split()[-1])
     mask = (alpha > 128).astype(np.uint8) * 255
     return mask
+
+
+def refine_crop_with_corner_sampling(
+    pil_img: Image.Image,
+    crop_bbox: tuple,
+    tolerance: int = 40,
+    edge_strip: int = 8,
+) -> Optional[Image.Image]:
+    """Pic2Pix-style: sample edge strips of crop, mask out pixels matching edge colors.
+    Edge sampling (full top/bottom/left/right strips) is more robust than corners alone.
+    Works when object is centered and crop edges contain background (grass, soil, etc)."""
+    x1, y1, x2, y2 = crop_bbox
+    crop = pil_img.crop((x1, y1, x2, y2))
+    cw, ch = crop.size
+    if cw < 16 or ch < 16:
+        return None
+    arr = np.array(crop)
+    if arr.ndim != 3 or arr.shape[2] < 3:
+        return None
+    strip = min(edge_strip, cw // 4, ch // 4, max(3, cw // 8), max(3, ch // 8))
+    if strip < 2:
+        return None
+    # Sample 4 edge strips: top, bottom, left, right
+    samples = [
+        arr[0:strip, :],  # top
+        arr[ch - strip : ch, :],  # bottom
+        arr[:, 0:strip],  # left
+        arr[:, cw - strip : cw],  # right
+    ]
+    comp = [np.mean(s[:, :, :3], axis=(0, 1)) for s in samples]
+    low = [np.maximum(c - tolerance, 0).astype(np.int32) for c in comp]
+    high = [np.minimum(c + tolerance, 255).astype(np.int32) for c in comp]
+    rgb = arr[:, :, :3].astype(np.int32)
+    alpha = arr[:, :, 3].copy()
+    for i in range(4):
+        lo, hi = low[i], high[i]
+        match = (
+            (rgb[:, :, 0] >= lo[0]) & (rgb[:, :, 0] <= hi[0])
+            & (rgb[:, :, 1] >= lo[1]) & (rgb[:, :, 1] <= hi[1])
+            & (rgb[:, :, 2] >= lo[2]) & (rgb[:, :, 2] <= hi[2])
+        )
+        alpha[match] = 0
+    arr[:, :, 3] = alpha
+    out = Image.fromarray(arr)
+    fg_pixels = np.count_nonzero(alpha > 128)
+    if fg_pixels < 50:
+        return None
+    return out
 
 
 def refine_crop_with_rembg(pil_img: Image.Image, crop_bbox: tuple) -> Optional[Image.Image]:
@@ -107,7 +155,7 @@ def _segment_animals_by_color(rgba: np.ndarray) -> np.ndarray:
     return mask
 
 
-def _is_mostly_green(rgba: np.ndarray, comp_mask: np.ndarray, thresh: float = 0.35) -> bool:
+def _is_mostly_green(rgba: np.ndarray, comp_mask: np.ndarray, thresh: float = 0.22) -> bool:
     """True if >thresh of masked pixels are green (palm fronds, grass)."""
     rgb = rgba[:, :, :3]
     hsv = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)
@@ -269,7 +317,7 @@ def run_pipeline(
     mask = _segment_animals_by_color(rgba)
     cv2.imwrite(str(out_dir / "mask_full.png"), mask)
 
-    print("Finding animal components (crop-then-rembg)...")
+    print("Finding animal components (corner-sampling primary, rembg fallback)...")
     components = connected_components(
         mask, rgba, min_area=min_animal_area, max_area=max_animal_area, max_aspect=2.2
     )
@@ -285,7 +333,16 @@ def run_pipeline(
         crop_bbox = (cx1, cy1, cx2, cy2)
 
         cutout = None
-        if HAS_REMBG:
+        # Primary: Pic2Pix-style edge sampling (no ML deps, works for centered objects)
+        refined = refine_crop_with_corner_sampling(pil, crop_bbox, tolerance=40, edge_strip=8)
+        if refined is not None:
+            arr = np.array(refined)
+            fg = np.count_nonzero(arr[:, :, 3] > 128)
+            crop_area = arr.shape[0] * arr.shape[1]
+            if fg >= min_animal_area and fg <= crop_area * 0.92:
+                cutout = refined
+
+        if cutout is None and HAS_REMBG:
             refined = refine_crop_with_rembg(pil, crop_bbox)
             if refined is not None:
                 arr = np.array(refined)
@@ -299,6 +356,17 @@ def run_pipeline(
 
         if cutout is None:
             continue
+        # Post-filter: reject cutouts that are mostly green (palm/foliage)
+        arr = np.array(cutout)
+        if arr.shape[2] >= 3:
+            fg = arr[:, :, 3] > 128
+            n_fg = np.count_nonzero(fg)
+            if n_fg > 0:
+                hsv = cv2.cvtColor(arr[:, :, :3], cv2.COLOR_RGB2HSV)
+                green = (hsv[:, :, 0] >= 17) & (hsv[:, :, 0] <= 42) & (hsv[:, :, 1] > 40)
+                n_green = np.count_nonzero(fg & green)
+                if n_green / n_fg > 0.2:
+                    continue
         cutout_path = out_dir / f"animal_{i:02d}_raw.png"
         cutout.save(cutout_path)
         cutouts.append((comp_mask, cutout))
@@ -306,7 +374,7 @@ def run_pipeline(
     # Inpaint background
     print("Inpainting background...")
     filled_bg = inpaint_background(rgba, mask)
-    bg_pil = Image.fromarray(filled_bg, "RGBA")
+    bg_pil = Image.fromarray(filled_bg)
     bg_pil.save(out_dir / "background_filled.png")
 
     # Pixelate and rotate each cutout, save sprite sheet
