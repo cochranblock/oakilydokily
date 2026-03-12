@@ -62,6 +62,18 @@ Open http://127.0.0.1:8765/index.html. Assets at `/assets/*` resolve from `mural
 
 Place sprite sheet at `assets/1000003453.png`. Grid: 4 cols × 3 rows. Falls back to white placeholder if missing.
 
+## Claymation pipeline (original mural animals)
+
+To extract the actual animals from the mural, inpaint the background, pixelate, and generate rotated poses:
+
+```bash
+cd mural-wasm/scripts
+pip install -r requirements.txt
+python claymation_pipeline.py -o out_claymation
+```
+
+Outputs: `background_filled.png`, `animal_XX_rotYY.png` (8-bit sprites), `frame_sample.png`. See `scripts/README.md`.
+
 ## Integration
 
 Embed in oakilydokily hero:

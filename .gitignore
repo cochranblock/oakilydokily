@@ -8,3 +8,6 @@
 # mural-wasm standalone (built/copied by build-standalone.sh)
 mural-wasm/mural-wasm.wasm
 mural-wasm/assets/
+
+# claymation pipeline output
+mural-wasm/scripts/out_claymation/
