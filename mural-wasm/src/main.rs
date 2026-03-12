@@ -24,6 +24,7 @@ fn window_conf() -> Conf {
     Conf {
         window_title: "OakilyDokily Mural".to_owned(),
         window_resizable: true,
+        high_dpi: true, // crisp rendering on Retina/HiDPI displays
         platform: miniquad::conf::Platform {
             framebuffer_alpha: true, // transparent canvas (clear_background alpha 0)
             ..Default::default()
