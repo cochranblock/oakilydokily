@@ -6,6 +6,7 @@
   }
   miniquad_add_plugin({
     on_init: function() {
+      if (typeof window.mural_ready === 'function') window.mural_ready();
       setInterval(function() {
         try {
           if (wasm_exports && wasm_exports.mural_set_scroll_x) wasm_exports.mural_set_scroll_x(window.scrollX);

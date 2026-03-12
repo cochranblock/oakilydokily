@@ -45,7 +45,7 @@ fn f73b() -> &'static str {
   c.style.width=w+'px';
   c.style.height=h+'px';
   c.style.display='block';
-  if(fb){fb.style.display='none';}
+  window.mural_ready=function(){if(fb)fb.style.display='none';};
   load('/assets/mural-wasm.wasm');
 })();
 </script>"#
