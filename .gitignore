@@ -4,3 +4,7 @@
 
 # Claude Code worktrees
 .claude/worktrees/
+
+# mural-wasm standalone (built/copied by build-standalone.sh)
+mural-wasm/mural-wasm.wasm
+mural-wasm/assets/

@@ -33,9 +33,18 @@ flowchart LR
 cargo build --target wasm32-unknown-unknown -p mural-wasm --release
 ```
 
-Output: `target/wasm32-unknown-unknown/debug/mural-wasm.wasm` (or `release/` with `--release`)
+Output: `target/wasm32-unknown-unknown/release/mural-wasm.wasm`
 
-Copy to `mural-wasm/` and serve with `index.html`.
+## Standalone demo
+
+From `oakilydokily/`:
+
+```bash
+./mural-wasm/build-standalone.sh   # build + copy WASM and assets
+cd mural-wasm && ./serve.sh       # serve at http://127.0.0.1:8765
+```
+
+Open http://127.0.0.1:8765/index.html. Assets at `/assets/*` resolve from `mural-wasm/assets/`.
 
 ## Features
 
