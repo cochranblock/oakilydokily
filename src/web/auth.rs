@@ -1,5 +1,5 @@
 // Unlicense — cochranblock.org
-// Contributors: GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
+// Contributors: mattbusel (XFactor), GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
 //! Sign in with Google + Facebook OAuth + manual (email/password). f82/f83=Google f98/f99=Facebook f100/f101=manual f84=logout
 
 #![allow(non_camel_case_types, non_snake_case, dead_code)]
