@@ -66,7 +66,7 @@ impl Pet {
     }
 
     /// f136=Pet::update. Anim timer, state logic, hearts.
-    pub fn update(&mut self, dt: f32, _atlas: &TextureAtlas) {
+    pub fn update(&mut self, dt: f32, _atlas: &TextureAtlas, mural_w: f32, _mural_h: f32) {
         self.anim_timer += dt;
         if self.anim_timer > 0.15 {
             self.anim_timer = 0.;
@@ -76,8 +76,7 @@ impl Pet {
         match self.state {
             PetState::Wandering => {
                 self.pos += self.vel * dt;
-                let w = macroquad::prelude::screen_width();
-                if self.pos.x < 32. || self.pos.x > w - 32. {
+                if self.pos.x < 32. || self.pos.x > mural_w - 32. {
                     self.vel.x = -self.vel.x;
                 }
             }
@@ -106,11 +105,16 @@ impl Pet {
         });
     }
 
-    /// f137=Pet::draw. Occlusion: Exodus off-screen skip.
-    pub fn draw(&self, atlas: &TextureAtlas) {
+    /// f137=Pet::draw. Mural-space pos transformed by scale and offset.
+    pub fn draw(&self, atlas: &TextureAtlas, scale: f32, ox: f32, oy: f32) {
         if self.state == PetState::Exodus && self.pos.x < -50. {
             return; // off-screen, don't draw
         }
+        let s = scale;
+        let x = ox + self.pos.x * s;
+        let y = oy + self.pos.y * s;
+        let w = 32. * s;
+        let h = 48. * s;
         let anim = match self.state {
             PetState::Wandering | PetState::Exodus => Animation::Walk,
             PetState::Sleeping => Animation::Sleeping,
@@ -119,17 +123,19 @@ impl Pet {
                     let uv = atlas.kiss_frame(self.anim_frame);
                     draw_texture_ex(
                         atlas.texture(),
-                        self.pos.x - 16.,
-                        self.pos.y - 24.,
+                        x - w / 2.,
+                        y - h,
                         WHITE,
                         DrawTextureParams {
-                            dest_size: Some(vec2(32., 48.)),
+                            dest_size: Some(vec2(w, h)),
                             source: Some(uv),
                             ..Default::default()
                         },
                     );
                     for h in &self.hearts {
-                        draw_circle(h.pos.x, h.pos.y, 4., RED);
+                        let hx = ox + h.pos.x * s;
+                        let hy = oy + h.pos.y * s;
+                        draw_circle(hx, hy, 4. * s, RED);
                     }
                     return;
                 }
@@ -139,11 +145,11 @@ impl Pet {
         let uv = atlas.frame(self.species, anim, self.anim_frame);
         draw_texture_ex(
             atlas.texture(),
-            self.pos.x - 16.,
-            self.pos.y - 24.,
+            x - w / 2.,
+            y - h,
             WHITE,
             DrawTextureParams {
-                dest_size: Some(vec2(32., 48.)),
+                dest_size: Some(vec2(w, h)),
                 source: Some(uv),
                 ..Default::default()
             },

@@ -19,6 +19,18 @@ use sprites::Species;
 use pet::{Pet, PetState};
 use scenes::SceneState;
 
+/// Aspect-preserving mural layout: integer scale when upscaling (crisp), fractional when downscaling.
+fn mural_layout(tex: &Texture2D, screen_w: f32, screen_h: f32) -> (f32, f32, f32, f32, f32) {
+    let (mw, mh) = (tex.width(), tex.height());
+    let fit = (screen_w / mw).min(screen_h / mh);
+    let scale = if fit >= 1. { fit.floor().max(1.) } else { fit };
+    let draw_w = mw * scale;
+    let draw_h = mh * scale;
+    let ox = (screen_w - draw_w) / 2.;
+    let oy = (screen_h - draw_h) / 2.;
+    (mw, mh, scale, ox, oy)
+}
+
 /// f119=window_conf. Transparent canvas, resizable.
 fn window_conf() -> Conf {
     Conf {
@@ -38,13 +50,15 @@ async fn main() {
     let sprite_sheet = SpriteSheet::load("/assets/1000003453.png").await;
     let atlas = TextureAtlas::from_sheet(&sprite_sheet);
 
-    // Position pets on the grassy areas of the mural (fractional, scaled at draw time)
-    let w = screen_width();
-    let h = screen_height();
+    // Mural-space positions (grassy areas). Layout computed each frame from texture.
+    let (mw, mh) = landscape
+        .as_ref()
+        .map(|t| (t.width(), t.height()))
+        .unwrap_or((1024., 558.));
     let mut pets = vec![
-        Pet::new(Species::Cat, vec2(w * 0.15, h * 0.55), &atlas),
-        Pet::new(Species::Dog, vec2(w * 0.45, h * 0.50), &atlas),
-        Pet::new(Species::GuineaPig, vec2(w * 0.70, h * 0.52), &atlas),
+        Pet::new(Species::Cat, vec2(mw * 0.15, mh * 0.55), &atlas),
+        Pet::new(Species::Dog, vec2(mw * 0.45, mh * 0.50), &atlas),
+        Pet::new(Species::GuineaPig, vec2(mw * 0.70, mh * 0.52), &atlas),
     ];
 
     let mut scene = SceneState::default();
@@ -69,8 +83,8 @@ async fn main() {
         last_scroll_y = scroll_y;
         let _ = mouse_pos;
 
-        // Hero canvas is fixed viewport — always process pets in canvas bounds, plus Exodus until exit
-        let viewport = Rect::new(0., 0., screen_width(), screen_height());
+        // Visible: in mural bounds or Exodus until exit
+        let viewport = Rect::new(0., 0., mw, mh);
         let visible_pets: Vec<usize> = pets
             .iter()
             .enumerate()
@@ -104,33 +118,37 @@ async fn main() {
         // Update visible pets only
         let dt = get_frame_time();
         for &i in &visible_pets {
-            pets[i].update(dt, &atlas);
+            pets[i].update(dt, &atlas, mw, mh);
         }
 
-        // Draw
-        if landscape.is_some() {
-            clear_background(Color::from_rgba(0, 0, 0, 0)); // transparent over landscape
-        } else {
-            clear_background(Color::from_rgba(0xe8, 0xee, 0xf2, 255)); // fallback when mural.png fails
-        }
+        // Draw: dark letterbox, integer-scaled mural centered, crisp pixels
+        let (screen_w, screen_h) = (screen_width(), screen_height());
+        clear_background(Color::from_rgba(0x1a, 0x1a, 0x2e, 255));
 
         if let Some(ref tex) = landscape {
+            let (_, _, scale, ox, oy) = mural_layout(tex, screen_w, screen_h);
+            let draw_w = tex.width() * scale;
+            let draw_h = tex.height() * scale;
             draw_texture_ex(
                 tex,
-                0.,
-                0.,
+                ox,
+                oy,
                 WHITE,
                 DrawTextureParams {
-                    dest_size: Some(vec2(screen_width(), screen_height())),
+                    dest_size: Some(vec2(draw_w, draw_h)),
                     ..Default::default()
                 },
             );
-        }
-
-        scene.draw();
-
-        for &i in &visible_pets {
-            pets[i].draw(&atlas);
+            scene.draw();
+            for &i in &visible_pets {
+                pets[i].draw(&atlas, scale, ox, oy);
+            }
+        } else {
+            clear_background(Color::from_rgba(0xe8, 0xee, 0xf2, 255));
+            scene.draw();
+            for &i in &visible_pets {
+                pets[i].draw(&atlas, 1., 0., 0.);
+            }
         }
 
         next_frame().await;

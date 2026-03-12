@@ -67,6 +67,7 @@ Place sprite sheet at `assets/1000003453.png`. Grid: 4 cols × 3 rows. Falls bac
 Extract animals from the mural, inpaint background, pixelate, rotate, composite. **Pure Rust:**
 
 ```bash
+# From workspace root (parent of oakilydokily) or oakilydokily:
 cargo run -p mural-claymation -- -o out_rust
 ```
 
