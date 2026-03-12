@@ -15,17 +15,11 @@ if [ ! -f "$OAKILY/mural-wasm/assets/pets_spritesheet.png" ]; then
   (cd "$SCRIPT_DIR/scripts" && python3 fetch_pixel_art.py 2>/dev/null) || true
 fi
 
-# Background with animals inpainted (no original animals under pet sprites)
-if [ -f "$MURAL" ]; then
-  (cd "$SCRIPT_DIR/scripts" && python3 background_only.py 2>/dev/null) || true
-fi
-
 if [ -f "$MURAL" ] && python3 -c "import rembg" 2>/dev/null; then
   echo "Running claymation pipeline (crop-then-rembg)..."
   (cd "$SCRIPT_DIR/scripts" && python3 claymation_pipeline.py ../../assets/mural.png -o ../assets/claymation_out --pixel-scale 1.0 2>/dev/null) || true
   if [ -f "$CLAY_OUT/claymation_spritesheet.png" ]; then
     cp "$CLAY_OUT/claymation_spritesheet.png" "$CLAY_OUT/claymation_meta.json" "$OAKILY/mural-wasm/assets/"
-    [ -f "$CLAY_OUT/background_filled.png" ] && cp "$CLAY_OUT/background_filled.png" "$OAKILY/mural-wasm/assets/background.png"
     echo "Using claymation animals."
   fi
 fi

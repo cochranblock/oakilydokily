@@ -6,7 +6,7 @@ Fetches CC0 pixel art (CatnDog pzUH) and builds `pets_spritesheet.png` (4×3: Ca
 
 ## background_only.py
 
-Creates `background.png` (mural with animals inpainted out). No rembg. Run before build so pet sprites overlay a clean background.
+Creates `background.png` (mural with animals inpainted out). Targeted mask, INPAINT_NS. **Not used by default** — inpaint often leaves visible artifacts. Run manually if needed.
 
 ## claymation_pipeline.py
 

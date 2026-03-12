@@ -41,10 +41,7 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf)]
 async fn main() {
-    let landscape = match landscape::load("/assets/background.png").await {
-        Some(t) => Some(t),
-        None => landscape::load("/assets/mural.png").await,
-    };
+    let landscape = landscape::load("/assets/mural.png").await;
     let claymation = ClaymationSheet::load().await;
     let sprite_sheet = SpriteSheet::load("/assets/pets_spritesheet.png").await;
     let atlas = TextureAtlas::from_sheet(&sprite_sheet);
