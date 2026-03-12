@@ -16,8 +16,12 @@ if [ ! -f "$OAKILY/mural-wasm/assets/pets_spritesheet.png" ]; then
 fi
 
 if [ -f "$MURAL" ] && python3 -c "import rembg" 2>/dev/null; then
-  echo "Running claymation pipeline (crop-then-rembg)..."
-  (cd "$SCRIPT_DIR/scripts" && python3 claymation_pipeline.py ../../assets/mural.png -o ../assets/claymation_out --pixel-scale 1.0 2>/dev/null) || true
+  echo "Running claymation pipeline..."
+  if [ -f "$SCRIPT_DIR/scripts/animal_regions.json" ]; then
+    (cd "$SCRIPT_DIR/scripts" && python3 claymation_pipeline.py ../../assets/mural.png -o ../assets/claymation_out --regions animal_regions.json --pixel-scale 1.0 2>/dev/null) || true
+  else
+    (cd "$SCRIPT_DIR/scripts" && python3 claymation_pipeline.py ../../assets/mural.png -o ../assets/claymation_out --pixel-scale 1.0 2>/dev/null) || true
+  fi
   if [ -f "$CLAY_OUT/claymation_spritesheet.png" ]; then
     cp "$CLAY_OUT/claymation_spritesheet.png" "$CLAY_OUT/claymation_meta.json" "$OAKILY/mural-wasm/assets/"
     [ -f "$CLAY_OUT/background_filled.png" ] && cp "$CLAY_OUT/background_filled.png" "$OAKILY/mural-wasm/assets/"

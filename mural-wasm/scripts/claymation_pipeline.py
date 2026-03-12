@@ -2,8 +2,10 @@
 # Unlicense — cochranblock.org
 # Mural claymation pipeline: segment animals from mural, inpaint background,
 # pixelate cutouts, generate rotated poses, composite frames.
+# Use --regions animal_regions.json for manual bboxes (rembg-only, no auto segmentation).
 
 import argparse
+import json
 import sys
 from pathlib import Path
 from typing import Optional
@@ -356,6 +358,113 @@ def composite_frame(
     return result
 
 
+def run_pipeline_from_regions(
+    mural_path: Path,
+    out_dir: Path,
+    regions_path: Path,
+    num_rotations: int = 4,
+    pixel_scale: float = 0.25,
+) -> None:
+    """Manual mode: use curated bboxes, rembg-only on each crop. No auto segmentation."""
+    ensure_deps()
+    if not HAS_REMBG:
+        print("Manual regions require rembg: pip install rembg", file=sys.stderr)
+        sys.exit(1)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    data = json.loads(regions_path.read_text())
+    regions = data.get("regions", data) if isinstance(data, dict) else data
+    if not isinstance(regions, list):
+        regions = [regions]
+
+    rgba, pil = load_image(mural_path)
+    h, w = rgba.shape[:2]
+
+    cutouts = []
+    for i, r in enumerate(regions):
+        if isinstance(r, (list, tuple)) and len(r) >= 4:
+            x1, y1, x2, y2 = int(r[0]), int(r[1]), int(r[2]), int(r[3])
+        else:
+            x1 = int(r.get("x1", 0))
+            y1 = int(r.get("y1", 0))
+            x2 = int(r.get("x2", 0))
+            y2 = int(r.get("y2", 0))
+        x1, x2 = min(x1, x2), max(x1, x2)
+        y1, y2 = min(y1, y2), max(y1, y2)
+        if x2 - x1 < 16 or y2 - y1 < 16:
+            continue
+        pad = max(8, min(24, (x2 - x1) // 4, (y2 - y1) // 4))
+        cx1 = max(0, x1 - pad)
+        cy1 = max(0, y1 - pad)
+        cx2 = min(w, x2 + pad)
+        cy2 = min(h, y2 + pad)
+        crop_bbox = (cx1, cy1, cx2, cy2)
+
+        refined = refine_crop_with_rembg(pil, crop_bbox)
+        if refined is None:
+            continue
+        arr = np.array(refined)
+        fg = np.count_nonzero(arr[:, :, 3] > 128)
+        crop_area = arr.shape[0] * arr.shape[1]
+        if fg < 80 or fg > crop_area * 0.95:
+            continue
+        cutout = refined
+
+        comp_mask = np.zeros((h, w), dtype=np.uint8)
+        cw, ch = cutout.size
+        ox, oy = cx1, cy1
+        alpha = np.array(cutout.split()[-1])
+        mask_region = (alpha > 128).astype(np.uint8) * 255
+        y_end = min(oy + ch, h)
+        x_end = min(ox + cw, w)
+        sy, sx = min(ch, y_end - oy), min(cw, x_end - ox)
+        comp_mask[oy : oy + sy, ox : ox + sx] = np.maximum(
+            comp_mask[oy : oy + sy, ox : ox + sx],
+            mask_region[:sy, :sx],
+        )
+
+        cutout.save(out_dir / f"animal_{i:02d}_raw.png")
+        cutouts.append((comp_mask, cutout))
+
+    if not cutouts:
+        print("No valid cutouts from regions. Check bboxes or install rembg.", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"Extracted {len(cutouts)} animals from {len(regions)} regions (rembg)")
+
+    animal_mask = np.zeros((h, w), dtype=np.uint8)
+    for comp_mask, _ in cutouts:
+        animal_mask = np.maximum(animal_mask, comp_mask)
+    kernel = np.ones((5, 5), np.uint8)
+    animal_mask = cv2.dilate(animal_mask, kernel)
+    filled_bg = inpaint_background(rgba, animal_mask)
+    bg_pil = Image.fromarray(filled_bg)
+    bg_pil.save(out_dir / "background_filled.png")
+
+    for i, (comp_mask, cutout) in enumerate(cutouts):
+        pixelated = pixelate_8bit(cutout, scale=pixel_scale)
+        pixelated = reduce_palette(pixelated, colors=16)
+        angles = [360 * j / num_rotations for j in range(num_rotations)]
+        for j, angle in enumerate(angles):
+            rotated = rotate_cutout(pixelated, angle)
+            rotated.save(out_dir / f"animal_{i:02d}_rot{j:02d}.png")
+
+    placements = []
+    for i, (comp_mask, _) in enumerate(cutouts):
+        ys_c, xs_c = np.where(comp_mask > 0)
+        if len(xs_c) == 0:
+            continue
+        cx, cy = int(xs_c.mean()), int(ys_c.mean())
+        sprite = Image.open(out_dir / f"animal_{i:02d}_rot00.png")
+        sw, sh = sprite.size
+        placements.append((cx - sw // 2, cy - sh // 2, sprite))
+    frame = composite_frame(filled_bg, placements)
+    frame.save(out_dir / "frame_sample.png")
+
+    _build_sprite_sheet(out_dir, len(cutouts), num_rotations)
+    print(f"Done. Outputs in {out_dir}")
+
+
 def run_pipeline(
     mural_path: Path,
     out_dir: Path,
@@ -511,6 +620,7 @@ def main():
     parser = argparse.ArgumentParser(description="Mural claymation asset pipeline")
     parser.add_argument("mural", type=Path, nargs="?", default=Path("../../assets/mural.png"))
     parser.add_argument("-o", "--out", type=Path, default=Path("out_claymation"))
+    parser.add_argument("--regions", type=Path, default=None, help="JSON with manual bboxes (rembg-only, no auto)")
     parser.add_argument("--rotations", type=int, default=4)
     parser.add_argument("--pixel-scale", type=float, default=1.0)
     parser.add_argument("--min-area", type=int, default=200)
@@ -530,14 +640,27 @@ def main():
         sys.exit(1)
 
     out = script_dir / args.out
-    run_pipeline(
-        mural_path=mural,
-        out_dir=out,
-        num_rotations=args.rotations,
-        pixel_scale=args.pixel_scale,
-        min_animal_area=args.min_area,
-        max_animal_area=args.max_area,
-    )
+    if args.regions is not None:
+        regions_path = (script_dir / args.regions).resolve() if not args.regions.is_absolute() else args.regions
+        if not regions_path.exists():
+            print(f"Regions file not found: {regions_path}", file=sys.stderr)
+            sys.exit(1)
+        run_pipeline_from_regions(
+            mural_path=mural,
+            out_dir=out,
+            regions_path=regions_path,
+            num_rotations=args.rotations,
+            pixel_scale=args.pixel_scale,
+        )
+    else:
+        run_pipeline(
+            mural_path=mural,
+            out_dir=out,
+            num_rotations=args.rotations,
+            pixel_scale=args.pixel_scale,
+            min_animal_area=args.min_area,
+            max_animal_area=args.max_area,
+        )
 
 
 if __name__ == "__main__":
