@@ -43,6 +43,8 @@ TURNSTILE_SECRET_KEY=
 
 ## 3. Google OAuth (Production)
 
+**See [GOOGLE_WORKSPACE_SETUP.md](GOOGLE_WORKSPACE_SETUP.md)** for full setup, env vars, and deploy notes.
+
 1. Go to [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials.
 2. Create or edit OAuth 2.0 Client ID (Web application).
 3. **Authorized redirect URIs** — add exactly:
