@@ -1,42 +1,45 @@
 // Unlicense — cochranblock.org
 // Contributors: mattbusel (XFactor), GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
-//! Claymation sprite sheet: animals from mural, cols=rotations, rows=animals.
+//! SpriteSheet: 4×3 grid. TextureAtlas: Cats row 0, Dogs row 1, Guinea Pigs row 2.
 
 use macroquad::prelude::*;
 use macroquad::texture::FilterMode;
-use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
-struct ClaymationMeta {
-    rows: u32,
-    cols: u32,
-    cell_w: u32,
-    cell_h: u32,
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Species {
+    Cat,
+    Dog,
+    GuineaPig,
 }
 
-/// Claymation sprite sheet: 8-bit animals from mural, grid cols=rotations (4), rows=animals.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Animation {
+    Walk,
+    Interaction,
+    Sleeping,
+}
+
 #[derive(Debug)]
-pub struct ClaymationSheet {
+pub struct SpriteSheet {
     pub texture: Texture2D,
-    pub rows: u32,
     pub cols: u32,
+    pub rows: u32,
     pub cell_w: f32,
     pub cell_h: f32,
 }
 
-impl ClaymationSheet {
-    /// Load claymation_spritesheet.png + claymation_meta.json. Fallback to placeholder if missing.
-    pub async fn load() -> Self {
-        let texture = match load_texture("/assets/claymation_spritesheet.png").await {
+impl SpriteSheet {
+    pub async fn load(path: &str) -> Self {
+        let texture = match load_texture(path).await {
             Ok(t) => t,
             Err(_) => {
                 let img = Image::gen_image_color(128, 96, WHITE);
                 let t = Texture2D::from_image(&img);
                 t.set_filter(FilterMode::Nearest);
-                return ClaymationSheet {
+                return SpriteSheet {
                     texture: t,
-                    rows: 3,
                     cols: 4,
+                    rows: 3,
                     cell_w: 32.,
                     cell_h: 32.,
                 };
@@ -44,39 +47,12 @@ impl ClaymationSheet {
         };
         texture.set_filter(FilterMode::Nearest);
         let (w, h) = (texture.width(), texture.height());
-
-        let meta: ClaymationMeta = match macroquad::file::load_string("/assets/claymation_meta.json").await {
-            Ok(s) => serde_json::from_str(&s).unwrap_or_else(|_| ClaymationMeta {
-                rows: (h / 128.).ceil() as u32,
-                cols: 4,
-                cell_w: 128,
-                cell_h: 128,
-            }),
-            Err(_) => ClaymationMeta {
-                rows: (h / 128.).ceil() as u32,
-                cols: 4,
-                cell_w: 128,
-                cell_h: 128,
-            },
-        };
-
-        let cell_w = if meta.cols > 0 {
-            w / meta.cols as f32
-        } else {
-            32.
-        };
-        let cell_h = if meta.rows > 0 {
-            h / meta.rows as f32
-        } else {
-            32.
-        };
-
-        ClaymationSheet {
+        SpriteSheet {
             texture,
-            rows: meta.rows,
-            cols: meta.cols,
-            cell_w,
-            cell_h,
+            cols: 4,
+            rows: 3,
+            cell_w: w / 4.,
+            cell_h: h / 3.,
         }
     }
 
@@ -85,11 +61,38 @@ impl ClaymationSheet {
         let y = row as f32 * self.cell_h;
         Rect::new(x, y, self.cell_w, self.cell_h)
     }
+}
 
-    /// Frame for animal at row, rotation at col. Rotation: 0=right, 1=down, 2=left, 3=up.
-    pub fn frame(&self, animal: u32, rotation: u32) -> Rect {
-        let row = animal.min(self.rows.saturating_sub(1));
-        let col = rotation % self.cols;
-        self.cell_rect(col, row)
+#[derive(Debug)]
+pub struct TextureAtlas<'a> {
+    sheet: &'a SpriteSheet,
+}
+
+impl<'a> TextureAtlas<'a> {
+    pub fn from_sheet(sheet: &'a SpriteSheet) -> Self {
+        TextureAtlas { sheet }
+    }
+
+    pub fn frame(&self, species: Species, anim: Animation, frame: u32) -> Rect {
+        let row = match species {
+            Species::Cat => 0,
+            Species::Dog => 1,
+            Species::GuineaPig => 2,
+        };
+        let col = match anim {
+            Animation::Walk => 0,
+            Animation::Interaction => 1,
+            Animation::Sleeping => 2,
+        };
+        let col = (col + frame) % self.sheet.cols;
+        self.sheet.cell_rect(col, row)
+    }
+
+    pub fn kiss_frame(&self, frame: u32) -> Rect {
+        self.sheet.cell_rect(3.min(frame), 2)
+    }
+
+    pub fn texture(&self) -> &Texture2D {
+        &self.sheet.texture
     }
 }

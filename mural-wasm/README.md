@@ -17,7 +17,7 @@ flowchart LR
     JS[JS / HTML] --> Bridge[mural-bridge.js]
     Bridge --> WASM[mural-wasm.wasm]
     WASM --> Macroquad[Macroquad render]
-    Macroquad --> Pets[Claymation animals from mural]
+    Macroquad --> Pets[Pets: Cat Dog GuineaPig]
     Macroquad --> Scenes[Scenes: Cozy Nook Tubing Doggy Door]
 ```
 
@@ -48,17 +48,18 @@ Open http://127.0.0.1:8765/index.html. Assets at `/assets/*` resolve from `mural
 
 ## Features
 
-- **Claymation animals**: 8-bit animals extracted from mural (mural-claymation pipeline)
-- **Sprite sheet**: cols=rotations (4), rows=animals; rotation from velocity (left/right)
-- **Pet entities**: Wandering, Exodus (scroll-triggered)
+- **SpriteSheet**: 4×3 grid (1000003453.png)
+- **TextureAtlas**: Cats row 0, Dogs row 1, Guinea Pigs row 2; Walk, Interaction, Sleeping, Kiss
+- **Pet entities**: Wandering, Sleeping, Interacting states
+- **Proximity detection**: Same species within 30px → Interaction
+- **Guinea Pig kiss**: Heart particles
 - **Scroll-triggered scenes**: Cozy Nook, Winter Tubing, Doggy Door (footer)
 - **JS bridge**: `mural_set_scroll_y(y)`, `mural_set_mouse(x, y)`
-- **Occlusion culling**: Only pets in viewport are updated
 - **FilterMode::Nearest**: Crisp 8-bit pixels
 
 ## Assets
 
-`build-standalone.sh` runs the claymation pipeline and copies `claymation_spritesheet.png` + `claymation_meta.json` to `assets/`. Requires `oakilydokily/assets/mural.png`. Falls back to placeholder if missing.
+Place `mural.png` and `1000003453.png` in `assets/`. `build-standalone.sh` copies them from `oakilydokily/assets/`.
 
 ## Claymation pipeline (original mural animals)
 
