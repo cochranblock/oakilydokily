@@ -53,8 +53,8 @@ async fn main() {
         .map(|t| (t.width(), t.height()))
         .unwrap_or((1024., 558.));
 
-    // One pet per claymation animal, spread across grassy areas
-    let num_animals = sheet.rows.max(1);
+    // One pet per claymation animal (cap at 12 to avoid clutter)
+    let num_animals = sheet.rows.min(12).max(1);
     let mut pets: Vec<Pet> = (0..num_animals)
         .map(|i| {
             let t = i as f32 / num_animals as f32;

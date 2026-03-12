@@ -18,16 +18,25 @@ struct Args {
     out: PathBuf,
     #[arg(long, default_value = "4")]
     rotations: usize,
-    #[arg(long, default_value = "0.25")]
+    #[arg(long, default_value = "1.0")]
     pixel_scale: f32,
-    #[arg(long, default_value = "150")]
+    #[arg(long, default_value = "200")]
     min_area: usize,
+    #[arg(long, default_value = "12000")]
+    max_area: usize,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
     let mural = resolve_mural(&args.mural)?;
-    run_pipeline(&mural, &args.out, args.rotations, args.pixel_scale, args.min_area)?;
+    run_pipeline(
+        &mural,
+        &args.out,
+        args.rotations,
+        args.pixel_scale,
+        args.min_area,
+        args.max_area,
+    )?;
     Ok(())
 }
 
@@ -82,7 +91,8 @@ fn segment_animals_by_color(img: &RgbaImage) -> ImageBuffer<Luma<u8>, Vec<u8>> {
             let h_180 = h / 2.0;
             let green = (17.0..=42.0).contains(&h_180) && s > 40.0;
             let blue = (45.0..=65.0).contains(&h_180);
-            let background = green || blue || s < 25.0;
+            let soil = (h_180 <= 15.0 || h_180 >= 170.0) && s > 45.0 && v < 55.0;
+            let background = green || blue || soil || s < 25.0;
             let animal = !background && v > 30.0;
             mask.put_pixel(x, y, Luma([if animal { 255 } else { 0 }]));
         }
@@ -144,6 +154,7 @@ fn run_pipeline(
     num_rotations: usize,
     pixel_scale: f32,
     min_area: usize,
+    max_area: usize,
 ) -> Result<(), Box<dyn std::error::Error>> {
     std::fs::create_dir_all(out_dir)?;
     let img = image::open(mural_path)?.to_rgba8();
@@ -152,25 +163,40 @@ fn run_pipeline(
     let mask = segment_animals_by_color(&img);
     mask.save(out_dir.join("mask_full.png"))?;
 
-    println!("Finding animal components...");
+    println!("Finding animal components (min_area={}, max_area={})...", min_area, max_area);
     let mut components = Vec::new();
     let labeled = connected_components(&mask, Connectivity::Eight, Luma([0u8]));
     let max_label = labeled.pixels().map(|p| p[0]).max().unwrap_or(0);
     for label in 1..=max_label {
         let mut comp_mask = ImageBuffer::new(labeled.width(), labeled.height());
         let mut area = 0usize;
+        let mut x1 = labeled.width();
+        let mut x2 = 0u32;
+        let mut y1 = labeled.height();
+        let mut y2 = 0u32;
         for y in 0..labeled.height() {
             for x in 0..labeled.width() {
                 let l = labeled.get_pixel(x, y)[0];
                 if l == label {
                     comp_mask.put_pixel(x, y, Luma([255]));
                     area += 1;
+                    x1 = x1.min(x);
+                    x2 = x2.max(x);
+                    y1 = y1.min(y);
+                    y2 = y2.max(y);
                 }
             }
         }
-        if area >= min_area {
-            components.push(comp_mask);
+        if area < min_area || area > max_area {
+            continue;
         }
+        let bw = x2 - x1 + 1;
+        let bh = y2 - y1 + 1;
+        let aspect = (bw as f32).max(bh as f32) / (bw as f32).min(bh as f32);
+        if aspect > 3.0 {
+            continue;
+        }
+        components.push(comp_mask);
     }
     println!("Found {} animal regions", components.len());
 
