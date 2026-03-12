@@ -64,15 +64,15 @@ Place sprite sheet at `assets/1000003453.png`. Grid: 4 cols × 3 rows. Falls bac
 
 ## Claymation pipeline (original mural animals)
 
-To extract the actual animals from the mural, inpaint the background, pixelate, and generate rotated poses:
+Extract animals from the mural, inpaint background, pixelate, rotate, composite. **Pure Rust:**
 
 ```bash
-cd mural-wasm/scripts
-pip install -r requirements.txt
-python claymation_pipeline.py -o out_claymation
+cargo run -p mural-claymation -- -o out_rust
 ```
 
-Outputs: `background_filled.png`, `animal_XX_rotYY.png` (8-bit sprites), `frame_sample.png`. See `scripts/README.md`.
+Or Python: `cd mural-wasm/scripts && pip install -r requirements.txt && python claymation_pipeline.py -o out_claymation`
+
+Outputs: `background_filled.png`, `animal_XX_rotYY.png`, `frame_sample.png`, `claymation_spritesheet.png`.
 
 ## Integration
 

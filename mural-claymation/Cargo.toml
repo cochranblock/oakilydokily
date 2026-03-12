@@ -1,0 +1,17 @@
+# Unlicense — cochranblock.org
+# Mural claymation pipeline: segment, inpaint, pixelate, rotate, composite.
+
+[package]
+name = "mural-claymation"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "claymation"
+path = "src/main.rs"
+
+[dependencies]
+image = "0.25"
+imageproc = "0.24"
+inpaint = { version = "0.1", features = ["image"] }
+clap = { workspace = true }

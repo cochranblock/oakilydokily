@@ -11,3 +11,4 @@ mural-wasm/assets/
 
 # claymation pipeline output
 mural-wasm/scripts/out_claymation/
+mural-wasm/scripts/out_rust/

@@ -2,16 +2,16 @@
 
 Extracts animals from the mural, inpaints the background, pixelates cutouts, generates rotated poses, and composites claymation-style frames.
 
-## Setup
+## Pure Rust (recommended)
+
+```bash
+cargo run -p mural-claymation -- -o out_rust
+```
+
+## Python
 
 ```bash
 pip install -r requirements.txt
-```
-
-## Run
-
-```bash
-cd mural-wasm/scripts
 python claymation_pipeline.py -o out_claymation
 ```
 
