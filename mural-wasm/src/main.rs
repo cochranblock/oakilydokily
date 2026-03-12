@@ -1,6 +1,6 @@
 // Unlicense — cochranblock.org
 // Contributors: mattbusel (XFactor), GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
-//! Interactive 2D mural: pets, proximity detection, scroll-triggered scenes.
+//! Interactive 2D mural: claymation animals from mural, scroll-triggered scenes.
 //! Build: cargo build --target wasm32-unknown-unknown -p mural-wasm --release
 
 #![allow(dead_code)]
@@ -14,8 +14,7 @@ mod pet;
 mod scenes;
 
 use bridge::{get_scroll_x, get_scroll_y};
-use sprites::{SpriteSheet, TextureAtlas};
-use sprites::Species;
+use sprites::ClaymationSheet;
 use pet::{Pet, PetState};
 use scenes::SceneState;
 
@@ -37,7 +36,7 @@ fn window_conf() -> Conf {
         window_title: "OakilyDokily Mural".to_owned(),
         window_resizable: true,
         platform: miniquad::conf::Platform {
-            framebuffer_alpha: true, // transparent canvas (clear_background alpha 0)
+            framebuffer_alpha: true,
             ..Default::default()
         },
         ..Default::default()
@@ -47,31 +46,33 @@ fn window_conf() -> Conf {
 #[macroquad::main(window_conf)]
 async fn main() {
     let landscape = landscape::load("/assets/mural.png").await;
-    let sprite_sheet = SpriteSheet::load("/assets/1000003453.png").await;
-    let atlas = TextureAtlas::from_sheet(&sprite_sheet);
+    let sheet = ClaymationSheet::load().await;
 
-    // Mural-space positions (grassy areas). Layout computed each frame from texture.
     let (mw, mh) = landscape
         .as_ref()
         .map(|t| (t.width(), t.height()))
         .unwrap_or((1024., 558.));
-    let mut pets = vec![
-        Pet::new(Species::Cat, vec2(mw * 0.15, mh * 0.55), &atlas),
-        Pet::new(Species::Dog, vec2(mw * 0.45, mh * 0.50), &atlas),
-        Pet::new(Species::GuineaPig, vec2(mw * 0.70, mh * 0.52), &atlas),
-    ];
+
+    // One pet per claymation animal, spread across grassy areas
+    let num_animals = sheet.rows.max(1);
+    let mut pets: Vec<Pet> = (0..num_animals)
+        .map(|i| {
+            let t = i as f32 / num_animals as f32;
+            let x = mw * (0.15 + t * 0.7);
+            let y = mh * (0.48 + (i as f32 * 0.03) % 0.1);
+            Pet::new(i, vec2(x, y))
+        })
+        .collect();
 
     let mut scene = SceneState::default();
     let mut last_scroll_x: f32 = 0.;
     let mut last_scroll_y: f32 = 0.;
 
     loop {
-        // JS bridge: scrollX, scrollY, mouse set by JS via mural_set_scroll_x/y, mural_set_mouse
         let scroll_x = get_scroll_x();
         let scroll_y = get_scroll_y();
-        let mouse_pos = bridge::get_mouse_pos();
+        let _mouse_pos = bridge::get_mouse_pos();
 
-        // Scroll-triggered scenes: Cozy Nook at scroll_x, Tubing at scroll_y, Doggy Door at footer
         let was_triggered = scene.doggy_door_triggered;
         scene.update(scroll_x, scroll_y, last_scroll_x, last_scroll_y);
         if scene.doggy_door_triggered && !was_triggered {
@@ -81,9 +82,7 @@ async fn main() {
         }
         last_scroll_x = scroll_x;
         last_scroll_y = scroll_y;
-        let _ = mouse_pos;
 
-        // Visible: in mural bounds or Exodus until exit
         let viewport = Rect::new(0., 0., mw, mh);
         let visible_pets: Vec<usize> = pets
             .iter()
@@ -95,33 +94,11 @@ async fn main() {
             .map(|(i, _)| i)
             .collect();
 
-        // Proximity detection: same species within 30px -> Interaction
-        for &i in &visible_pets {
-            for &j in &visible_pets {
-                if i >= j {
-                    continue;
-                }
-                let (pi, pj) = (pets[i].species, pets[j].species);
-                if pi == pj && pets[i].pos.distance(pets[j].pos) < 30. {
-                    pets[i].state = PetState::Interacting;
-                    pets[i].interaction_timer = 0.;
-                    pets[j].state = PetState::Interacting;
-                    pets[j].interaction_timer = 0.;
-                    if pi == Species::GuineaPig {
-                        pets[i].trigger_kiss();
-                        pets[j].trigger_kiss();
-                    }
-                }
-            }
-        }
-
-        // Update visible pets only
         let dt = get_frame_time();
         for &i in &visible_pets {
-            pets[i].update(dt, &atlas, mw, mh);
+            pets[i].update(dt, &sheet, mw, mh);
         }
 
-        // Draw: dark letterbox, integer-scaled mural centered, crisp pixels
         let (screen_w, screen_h) = (screen_width(), screen_height());
         clear_background(Color::from_rgba(0x1a, 0x1a, 0x2e, 255));
 
@@ -141,17 +118,16 @@ async fn main() {
             );
             scene.draw();
             for &i in &visible_pets {
-                pets[i].draw(&atlas, scale, ox, oy);
+                pets[i].draw(&sheet, scale, ox, oy);
             }
         } else {
             clear_background(Color::from_rgba(0xe8, 0xee, 0xf2, 255));
             scene.draw();
             for &i in &visible_pets {
-                pets[i].draw(&atlas, 1., 0., 0.);
+                pets[i].draw(&sheet, 1., 0., 0.);
             }
         }
 
         next_frame().await;
     }
 }
-

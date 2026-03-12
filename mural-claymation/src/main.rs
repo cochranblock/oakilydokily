@@ -400,6 +400,11 @@ fn build_sprite_sheet(
         }
     }
     sheet.save(out_dir.join("claymation_spritesheet.png"))?;
+    let meta = format!(
+        r#"{{"rows":{},"cols":{},"cell_w":{},"cell_h":{}}}"#,
+        rows, cols, max_w, max_h
+    );
+    std::fs::write(out_dir.join("claymation_meta.json"), meta)?;
     println!("Sprite sheet: {}×{} cells, {}×{} each", cols, rows, max_w, max_h);
     Ok(())
 }
