@@ -125,41 +125,40 @@ async fn main() {
         let (screen_w, screen_h) = (screen_width(), screen_height());
         clear_background(Color::from_rgba(0x1a, 0x1a, 0x2e, 255));
 
-        if let Some(ref tex) = landscape {
-            let (_, _, scale, ox, oy) = mural_layout(tex, screen_w, screen_h);
-            let draw_w = tex.width() * scale;
-            let draw_h = tex.height() * scale;
-            draw_texture_ex(
-                tex,
-                ox,
-                oy,
-                WHITE,
-                DrawTextureParams {
-                    dest_size: Some(vec2(draw_w, draw_h)),
-                    ..Default::default()
-                },
-            );
+        let (scale, ox, oy) = if claymation.is_some() && landscape.is_some() {
+            let (_, _, s, x, y) = mural_layout(landscape.as_ref().unwrap(), screen_w, screen_h);
+            if let Some(ref tex) = landscape {
+                let draw_w = tex.width() * s;
+                let draw_h = tex.height() * s;
+                draw_texture_ex(
+                    tex,
+                    x,
+                    y,
+                    WHITE,
+                    DrawTextureParams {
+                        dest_size: Some(vec2(draw_w, draw_h)),
+                        ..Default::default()
+                    },
+                );
+            }
             scene.draw();
-            if let Some(ref sheet) = claymation {
-                for &i in &visible {
-                    pets[i].draw_claymation(sheet, scale, ox, oy);
-                }
-            } else {
-                for &i in &visible {
-                    pets[i].draw_sprite(&atlas, scale, ox, oy);
-                }
+            (s, x, y)
+        } else {
+            scene.draw();
+            let fit = (screen_w / mw).min(screen_h / mh);
+            let s = if fit >= 1. { fit.floor().max(1.) } else { fit };
+            let draw_w = mw * s;
+            let draw_h = mh * s;
+            (s, (screen_w - draw_w) / 2., (screen_h - draw_h) / 2.)
+        };
+
+        if let Some(ref sheet) = claymation {
+            for &i in &visible {
+                pets[i].draw_claymation(sheet, scale, ox, oy);
             }
         } else {
-            clear_background(Color::from_rgba(0xe8, 0xee, 0xf2, 255));
-            scene.draw();
-            if let Some(ref sheet) = claymation {
-                for &i in &visible {
-                    pets[i].draw_claymation(sheet, 1., 0., 0.);
-                }
-            } else {
-                for &i in &visible {
-                    pets[i].draw_sprite(&atlas, 1., 0., 0.);
-                }
+            for &i in &visible {
+                pets[i].draw_sprite(&atlas, scale, ox, oy);
             }
         }
 
