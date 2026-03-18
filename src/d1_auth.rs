@@ -1,8 +1,8 @@
-// Unlicense — cochranblock.org
-// Contributors: mattbusel (XFactor), GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
 //! Sharded D1 auth storage. f78=user_get f79=user_create. Replaces on-premise users table.
 
 #![allow(non_camel_case_types, non_snake_case, dead_code)]
+// Unlicense — cochranblock.org
+// Contributors: Mattbusel (XFactor), GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
 
 use chrono::Utc;
 use reqwest::Client;

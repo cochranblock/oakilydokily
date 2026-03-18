@@ -1,6 +1,7 @@
-// Unlicense — cochranblock.org
-// Contributors: mattbusel (XFactor), GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
 //! f30 = run_tests. HTTP-based UI/UX, feature gap, user analysis. Server must be up.
+
+// Unlicense — cochranblock.org
+// Contributors: Mattbusel (XFactor), GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
 
 use std::time::Duration;
 

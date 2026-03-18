@@ -1,6 +1,7 @@
-// Unlicense — cochranblock.org
-// Contributors: mattbusel (XFactor), GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
 //! Shared head helpers: GA4, etc.
+
+// Unlicense — cochranblock.org
+// Contributors: Mattbusel (XFactor), GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
 
 /// f80 = ga4_script. Returns gtag script when GA4_MEASUREMENT_ID set.
 pub fn f80() -> String {

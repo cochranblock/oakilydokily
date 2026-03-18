@@ -1,5 +1,6 @@
 <!-- Unlicense — cochranblock.org -->
-<!-- Contributors: mattbusel (XFactor), GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3 -->
+<!-- Contributors: Mattbusel (XFactor), GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3 -->
+
 # THROW THE BOOK: OakilyDokily — Three Sequential TRIPLE SIMS
 
 **Viewports:** Mobile ≤768px (375px primary), Desktop ≥769px  

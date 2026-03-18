@@ -1,4 +1,7 @@
 #!/bin/bash
+# Unlicense — cochranblock.org
+# Contributors: Mattbusel (XFactor), GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
+
 # Build mural-wasm and copy WASM + assets. Prefer claymation (Python crop-then-rembg) when available.
 set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

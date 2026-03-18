@@ -1,5 +1,7 @@
 #!/bin/bash
 # Unlicense — cochranblock.org
+# Contributors: Mattbusel (XFactor), GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
+
 # HTTP-based simulation: UI/UX, Feature Gap, User Analysis
 # Run against BASE (default http://127.0.0.1:3000). Server must be up.
 # Usage: ./scripts/sim-http.sh   or   BASE=https://oakilydokily.com ./scripts/sim-http.sh

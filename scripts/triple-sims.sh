@@ -1,5 +1,7 @@
 #!/bin/bash
 # Unlicense — cochranblock.org
+# Contributors: Mattbusel (XFactor), GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
+
 # Run TRIPLE SIMS: 3 sequential passes. All must pass.
 # Use: ./scripts/triple-sims.sh [--http]
 # --http: use sim-http.sh against BASE (server must be up) instead of cargo test

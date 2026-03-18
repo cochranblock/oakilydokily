@@ -1,4 +1,7 @@
 #!/bin/bash
+# Unlicense — cochranblock.org
+# Contributors: Mattbusel (XFactor), GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
+
 # Restart oakilydokily only.
 # Usage: ./scripts/restart-oakilydokily.sh [--bg]
 # For waiver tests: OD_TEST_WAIVER_BYPASS=1 ./scripts/restart-oakilydokily.sh --bg

@@ -1,4 +1,6 @@
 # Unlicense — cochranblock.org
+# Contributors: Mattbusel (XFactor), GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
+
 # Mural claymation pipeline: segment, inpaint, pixelate, rotate, composite.
 
 [package]
@@ -14,4 +16,4 @@ path = "src/main.rs"
 image = "0.25"
 imageproc = "0.24"
 inpaint = { version = "0.1", features = ["image"] }
-clap = { workspace = true }
+clap = { version = "4", features = ["derive"] }

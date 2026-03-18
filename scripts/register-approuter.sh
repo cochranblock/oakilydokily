@@ -1,6 +1,7 @@
-# Unlicense — cochranblock.org
-# Contributors: mattbusel (XFactor), GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
 #!/bin/bash
+# Unlicense — cochranblock.org
+# Contributors: Mattbusel (XFactor), GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
+
 # Register oakilydokily with approuter for Cloudflare tunnel routing.
 # Uses approuter's openapi.json to discover base URL. Run when approuter is up.
 # Requires: approuter running, CF_TOKEN in approuter env.

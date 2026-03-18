@@ -1,6 +1,7 @@
-// Unlicense — cochranblock.org
-// Contributors: mattbusel (XFactor), GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
 //! Waiver confirmation email. Gmail API (Workspace) or Resend. P20: blocking, no spawn.
+
+// Unlicense — cochranblock.org
+// Contributors: Mattbusel (XFactor), GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
 
 /// f78 = send_waiver_confirmation. Why: Blocking per P20. Gmail API for Workspace; Resend fallback.
 pub fn f78(to: &str, full_name: &str, ref_id: &str) {
