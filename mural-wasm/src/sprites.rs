@@ -76,6 +76,42 @@ impl ClaymationSheet {
     }
 }
 
+/// Forged sprite sheet — pixel-forge generated sprites loaded at runtime from RGBA bytes.
+/// Layout: single row of `count` sprites, each cell_w × cell_h pixels.
+#[derive(Debug)]
+pub struct ForgedSheet {
+    pub texture: Texture2D,
+    pub count: u32,
+    pub cell_w: f32,
+    pub cell_h: f32,
+}
+
+impl ForgedSheet {
+    /// Create from raw RGBA bytes. sheet_w = count * cell_w, sheet_h = cell_h.
+    pub fn from_rgba(bytes: &[u8], count: u32, cell_w: u32, cell_h: u32) -> Option<Self> {
+        let sheet_w = count * cell_w;
+        let sheet_h = cell_h;
+        let expected = (sheet_w * sheet_h * 4) as usize;
+        if bytes.len() != expected {
+            return None;
+        }
+        let texture = Texture2D::from_rgba8(sheet_w as u16, sheet_h as u16, bytes);
+        texture.set_filter(FilterMode::Nearest);
+        Some(ForgedSheet {
+            texture,
+            count,
+            cell_w: cell_w as f32,
+            cell_h: cell_h as f32,
+        })
+    }
+
+    /// Get UV rect for sprite at index (single row layout).
+    pub fn frame(&self, index: u32) -> Rect {
+        let col = index % self.count;
+        Rect::new(col as f32 * self.cell_w, 0., self.cell_w, self.cell_h)
+    }
+}
+
 /// Fallback: 4×3 sprite sheet (Cat, Dog, GuineaPig).
 #[derive(Debug)]
 pub struct SpriteSheet {

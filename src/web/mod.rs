@@ -4,6 +4,7 @@
 pub mod assets;
 pub mod auth;
 pub mod email;
+pub mod forge;
 pub mod head;
 pub mod pages;
 pub mod router;

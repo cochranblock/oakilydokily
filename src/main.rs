@@ -66,6 +66,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let app = router::router(AppState {
         s0: pool,
         s1: d1,
+        s2: oakilydokily::web::forge::new_cache(),
     });
     #[cfg(feature = "approuter")]
     f116(RegisterConfig {

@@ -4,11 +4,12 @@
 // Pet: claymation animal or fallback Cat/Dog/GuineaPig.
 
 use macroquad::prelude::*;
-use crate::sprites::{ClaymationSheet, TextureAtlas, Species, Animation};
+use crate::sprites::{ClaymationSheet, ForgedSheet, TextureAtlas, Species, Animation};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PetKind {
     Claymation(u32),
+    Forged(u32),
     Sprite(Species),
 }
 
@@ -51,6 +52,19 @@ impl Pet {
         }
     }
 
+    pub fn forged(index: u32, pos: Vec2) -> Self {
+        Pet {
+            kind: PetKind::Forged(index),
+            pos,
+            vel: vec2(20., 0.),
+            state: PetState::Wandering,
+            anim_frame: 0,
+            anim_timer: 0.,
+            interaction_timer: 0.,
+            hearts: vec![],
+        }
+    }
+
     pub fn sprite(species: Species, pos: Vec2, _atlas: &TextureAtlas) -> Self {
         Pet {
             kind: PetKind::Sprite(species),
@@ -80,6 +94,7 @@ impl Pet {
     pub fn same_kind(&self, other: &Pet) -> bool {
         match (&self.kind, &other.kind) {
             (PetKind::Sprite(a), PetKind::Sprite(b)) => a == b,
+            (PetKind::Forged(a), PetKind::Forged(b)) => a == b,
             _ => false,
         }
     }
@@ -129,6 +144,30 @@ impl Pet {
         let y = oy + self.pos.y * s;
         let rot = if self.vel.x >= 0. { 0 } else { 2 };
         let uv = sheet.frame(animal, rot);
+        let w = uv.w * s;
+        let h = uv.h * s;
+        draw_texture_ex(
+            &sheet.texture,
+            x - w / 2.,
+            y - h,
+            WHITE,
+            DrawTextureParams {
+                dest_size: Some(vec2(w, h)),
+                source: Some(uv),
+                ..Default::default()
+            },
+        );
+    }
+
+    pub fn draw_forged(&self, sheet: &ForgedSheet, scale: f32, ox: f32, oy: f32) {
+        if self.state == PetState::Exodus && self.pos.x < -50. {
+            return;
+        }
+        let PetKind::Forged(index) = self.kind else { return };
+        let s = scale;
+        let x = ox + self.pos.x * s;
+        let y = oy + self.pos.y * s;
+        let uv = sheet.frame(index);
         let w = uv.w * s;
         let h = uv.h * s;
         draw_texture_ex(

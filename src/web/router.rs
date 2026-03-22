@@ -3,11 +3,11 @@
 // Unlicense — cochranblock.org
 // Contributors: Mattbusel (XFactor), GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
 
-use axum::{routing::get, Router};
+use axum::{routing::{get, post}, Router};
 use axum::response::Redirect;
 use tower_http::{compression::CompressionLayer, trace::TraceLayer};
 
-use super::{assets, auth, pages, waiver};
+use super::{assets, auth, forge, pages, waiver};
 use crate::AppState;
 
 /// f1 = router. Why: Single entry for all OD routes; state shared via Arc.
@@ -27,6 +27,7 @@ pub fn f1(state: AppState) -> Router {
         .route("/auth/apple/callback", get(auth::f92))
         .route("/auth/login", get(auth::f100).post(auth::f101))
         .route("/auth/logout", get(auth::f84))
+        .route("/api/forge", post(forge::handler))
         .route("/health", get(pages::health))
         .route("/favicon.ico", get(|| async { Redirect::permanent("/assets/favicon.svg") }))
         .route("/sitemap.xml", get(pages::sitemap))

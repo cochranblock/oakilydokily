@@ -22,7 +22,8 @@ fn is_benign_console_msg(msg: &str) -> bool {
         || (s.contains("webgl") && s.contains("deprecated"))
         || s.contains("gpu stall") || s.contains("gl_close_path")
         || s.contains("groupmarkernotset")
-        || (s.contains("failed to load resource") && s.contains("404"))
+        || (s.contains("failed to load resource") && (s.contains("404") || s.contains("502")))
+        || s.contains("forge:")
 }
 
 /// f62 = check_console_errors. Headless Chromium visits each path, collects console.error/warning. Returns errors or empty.

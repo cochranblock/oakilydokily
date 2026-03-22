@@ -14,7 +14,7 @@ mod pet;
 mod scenes;
 
 use bridge::{get_scroll_x, get_scroll_y};
-use sprites::{ClaymationSheet, Species};
+use sprites::{ClaymationSheet, ForgedSheet, Species};
 use pet::{Pet, PetKind, PetState};
 use scenes::SceneState;
 
@@ -73,11 +73,30 @@ async fn main() {
         vec![]  // No sprite fallback — show mural only
     };
 
+    let mut forged: Option<ForgedSheet> = None;
+
     let mut scene = SceneState::default();
     let mut last_scroll_x: f32 = 0.;
     let mut last_scroll_y: f32 = 0.;
 
     loop {
+        // Check for pixel-forge sprites arriving from JS
+        if forged.is_none() {
+            if let Some((bytes, count, cw, ch)) = bridge::take_forged_pending() {
+                if let Some(sheet) = ForgedSheet::from_rgba(&bytes, count, cw, ch) {
+                    let n = sheet.count.min(12);
+                    for i in 0..n {
+                        let t = i as f32 / n as f32;
+                        pets.push(Pet::forged(
+                            i,
+                            vec2(mw * (0.15 + t * 0.7), mh * (0.48 + (i as f32 * 0.03) % 0.1)),
+                        ));
+                    }
+                    forged = Some(sheet);
+                }
+            }
+        }
+
         let scroll_x = get_scroll_x();
         let scroll_y = get_scroll_y();
         let _mouse = bridge::get_mouse_pos();
@@ -145,13 +164,19 @@ async fn main() {
         }
         scene.draw();
 
+        let (_, _, s, x, y) = landscape
+            .as_ref()
+            .map(|t| mural_layout(t, screen_w, screen_h))
+            .unwrap_or((mw, mh, 1., 0., 0.));
+
         if let Some(ref sheet) = claymation {
-            let (_, _, s, x, y) = landscape
-                .as_ref()
-                .map(|t| mural_layout(t, screen_w, screen_h))
-                .unwrap_or((mw, mh, 1., 0., 0.));
             for &i in &visible {
                 pets[i].draw_claymation(sheet, s, x, y);
+            }
+        }
+        if let Some(ref sheet) = forged {
+            for &i in &visible {
+                pets[i].draw_forged(sheet, s, x, y);
             }
         }
 

@@ -15,10 +15,11 @@ pub mod web;
 
 use sqlx::sqlite::SqlitePool;
 
-/// t0 = AppState. s0=waiver pool s1=optional D1 auth (when OD_AUTH_D1=1)
+/// t0 = AppState. s0=waiver pool s1=optional D1 auth (when OD_AUTH_D1=1) s2=forge cache
 #[derive(Clone)]
 pub struct t0 {
     pub s0: SqlitePool,
     pub s1: Option<d1_auth::t78>,
+    pub s2: web::forge::ForgeCache,
 }
 pub use t0 as AppState;

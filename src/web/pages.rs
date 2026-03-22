@@ -21,16 +21,16 @@ fn f70(p0: &str, p1: &str, p2: &str, p3: &str) -> String {
 
 const FOOTER: &str = r##"</main><footer class="footer"><nav class="footer-nav"><a href="/">Home</a><a href="/about">About</a><a href="/contact">Contact</a><a href="/waiver">Waiver</a></nav><p>&copy; 2026 OakilyDokily</p><p class="footer-cta"><a href="mailto:byrdkaylie34@gmail.com?subject=OakilyDokily%20Inquiry" class="btn btn-primary">Get in Touch</a></p></footer><script>(function(){var t=document.querySelector('.nav-toggle');var n=document.getElementById('nav-links');if(t&&n){t.onclick=function(){var o=n.classList.toggle('nav-open');t.setAttribute('aria-expanded',o);}}}());</script></body></html>"##;
 
-/// f73 = hero cover — static mural (WASM removed)
+/// f73 = hero cover — WASM mural canvas with pixel-forge sprites
 fn f73() -> String {
     r#"<div class="hero-cover" aria-hidden="true">
-          <img src="/assets/mural.png" alt="" class="hero-cover-img" width="1200" height="400">
+          <canvas id="glcanvas" tabindex="-1" style="width:100%;max-width:1024px;height:auto;aspect-ratio:1024/558;display:block;margin:0 auto;"></canvas>
         </div>"#.to_string()
 }
 
-/// f73b = no-op (WASM mural removed)
+/// f73b = WASM mural loader scripts (after main content so canvas exists)
 fn f73b() -> &'static str {
-    ""
+    r#"<script src="/assets/gl.js"></script><script src="/assets/mural-bridge.js"></script><script>load("/assets/mural-wasm.wasm");</script>"#
 }
 
 /// f104 = home. GET /. Hero with 8-bit island cover, auth link.
@@ -48,7 +48,7 @@ pub async fn home(State(_s): State<Arc<AppState>>, jar: CookieJar) -> Html<Strin
     );
     Html(format!(
         "{}{}{}{}{}",
-        f70("OakilyDokily | Veterinary Professional Services", "OakilyDokily — Veterinary professional services for clinics and boarding facilities. Kennel operations, overnight care, surgical support, technician coverage.", "home", &format!(r#"<link rel="preload" href="/assets/mural.png" as="image" />{}"#, head::f80())),
+        f70("OakilyDokily | Veterinary Professional Services", "OakilyDokily — Veterinary professional services for clinics and boarding facilities. Kennel operations, overnight care, surgical support, technician coverage.", "home", &format!(r#"<link rel="preload" href="/assets/gl.js" as="script" />{}"#, head::f80())),
         head::f90(&auth_link),
         content,
         f73b(),
