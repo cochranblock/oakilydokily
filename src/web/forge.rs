@@ -78,7 +78,7 @@ pub async fn handler(
         .arg("-o").arg("ConnectTimeout=10")
         .arg("-o").arg("BatchMode=yes")
         .arg(FORGE_NODE)
-        .arg(format!("echo '{}' | {} plugin", plugin_json, FORGE_BIN))
+        .arg(format!("cd ~/pixel-forge && source ~/.cargo/env && echo '{}' | {} plugin", plugin_json, FORGE_BIN))
         .output()
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("ssh: {e}")))?;
