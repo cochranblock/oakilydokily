@@ -4,10 +4,17 @@
 // Contributors: Mattbusel (XFactor), GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
 
 use chrono::Utc;
+use flate2::read::GzDecoder;
+use flate2::write::GzEncoder;
+use flate2::Compression;
 use sha2::{Digest, Sha256};
 use sqlx::sqlite::SqlitePool;
-use std::path::Path;
+use std::io::{Read as _, Write as _};
+use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 use uuid::Uuid;
+
+static ARCHIVE_DIR: OnceLock<PathBuf> = OnceLock::new();
 
 pub const TERMS_VERSION: &str = "2026-01";
 const TERMS: &str = include_str!("../content/waiver_terms.txt");
@@ -17,11 +24,15 @@ pub fn terms_hash() -> String {
     format!("{:x}", Sha256::digest(TERMS.as_bytes()))
 }
 
-/// f113 = init_pool. Create data dir, connect SQLite, migrate.
+/// f113 = init_pool. Create data dir, connect SQLite, migrate. Also prunes archive > 1 year.
 pub async fn init_pool(
     data_dir: &Path,
 ) -> Result<SqlitePool, Box<dyn std::error::Error + Send + Sync>> {
     std::fs::create_dir_all(data_dir)?;
+    let arc_dir = data_dir.join("waivers");
+    std::fs::create_dir_all(&arc_dir)?;
+    let _ = ARCHIVE_DIR.set(arc_dir);
+    archive_prune();
     let db_path = data_dir.join("waivers.sqlite");
     let url = format!("sqlite:{}?mode=rwc", db_path.display());
     let pool = SqlitePool::connect(&url).await?;
@@ -76,7 +87,7 @@ async fn migrate(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     Ok(())
 }
 
-/// f114 = insert. Insert waiver record. Returns ref_id.
+/// f114 = insert. Insert waiver record. Returns ref_id. Also writes compressed archive.
 pub async fn insert(
     pool: &SqlitePool,
     full_name: &str,
@@ -105,7 +116,77 @@ pub async fn insert(
     .bind(signature_text)
     .execute(pool)
     .await?;
+    archive_write(&id, full_name, email, &signed_at, ip_address, user_agent, &hash);
     Ok(id)
+}
+
+/// f118 = archive_write. Gzip-compressed JSON, one file per waiver. Tiny footprint.
+fn archive_write(
+    id: &str,
+    name: &str,
+    email: &str,
+    signed_at: &str,
+    ip: Option<&str>,
+    ua: Option<&str>,
+    terms_hash: &str,
+) {
+    let Some(dir) = ARCHIVE_DIR.get() else {
+        return;
+    };
+    let date = &signed_at[..10].replace('-', "");
+    let short = &id[..8];
+    let path = dir.join(format!("{}_{}.gz", date, short));
+    let json = serde_json::json!({
+        "i": id, "n": name, "e": email, "t": signed_at,
+        "ip": ip, "ua": ua, "v": TERMS_VERSION, "h": terms_hash
+    });
+    let Ok(raw) = serde_json::to_vec(&json) else {
+        return;
+    };
+    let Ok(f) = std::fs::File::create(&path) else {
+        tracing::warn!("archive write failed: {}", path.display());
+        return;
+    };
+    let mut gz = GzEncoder::new(f, Compression::best());
+    let _ = gz.write_all(&raw);
+    let _ = gz.finish();
+}
+
+/// f119 = archive_read. Decompress a single .gz waiver file back to JSON.
+pub fn archive_read(path: &Path) -> Option<serde_json::Value> {
+    let f = std::fs::File::open(path).ok()?;
+    let mut dec = GzDecoder::new(f);
+    let mut buf = Vec::new();
+    dec.read_to_end(&mut buf).ok()?;
+    serde_json::from_slice(&buf).ok()
+}
+
+/// f120 = archive_prune. Delete .gz files older than 365 days.
+fn archive_prune() {
+    let Some(dir) = ARCHIVE_DIR.get() else {
+        return;
+    };
+    let cutoff = chrono::Utc::now() - chrono::Duration::days(2557); // 7 years
+    let cutoff_str = cutoff.format("%Y%m%d").to_string();
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+    let mut pruned = 0u32;
+    for entry in entries.flatten() {
+        let name = entry.file_name();
+        let s = name.to_string_lossy();
+        if !s.ends_with(".gz") {
+            continue;
+        }
+        // filename: YYYYMMDD_shortid.gz — first 8 chars are the date
+        if s.len() >= 8 && &s[..8] < cutoff_str.as_str() {
+            let _ = std::fs::remove_file(entry.path());
+            pruned += 1;
+        }
+    }
+    if pruned > 0 {
+        tracing::info!("archive: pruned {} waiver files older than 1 year", pruned);
+    }
 }
 
 /// f115 = terms_text. Raw waiver terms for display.
@@ -162,6 +243,9 @@ pub fn f77(full_name: &str, email: &str) -> Result<(), &'static str> {
     }
     if e.len() > 254 {
         return Err("email too long");
+    }
+    if !e.contains('@') || e.starts_with('@') || e.ends_with('@') {
+        return Err("email invalid");
     }
     Ok(())
 }

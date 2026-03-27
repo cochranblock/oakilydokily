@@ -26,6 +26,7 @@ pub fn f1(state: AppState) -> Router {
         .route("/auth/apple", get(auth::f91))
         .route("/auth/apple/callback", get(auth::f92))
         .route("/auth/login", get(auth::f100).post(auth::f101))
+        .route("/auth/signup", get(auth::f102).post(auth::f103))
         .route("/auth/logout", get(auth::f84))
         .route("/api/forge", post(forge::handler))
         .route("/health", get(pages::health))

@@ -81,9 +81,10 @@ pub async fn f74(State(_s): State<Arc<AppState>>, jar: CookieJar) -> impl IntoRe
 <div class="ds-sign"><div class="ds-line"></div><p class="ds-sign-label">Sign here</p>
 <form class="ds-form" method="post" action="/waiver" id="waiver-form"><label for="full_name">Full legal name</label><input type="text" id="full_name" name="full_name" required autocomplete="name" placeholder="Type your full legal name" maxlength="200"><label for="email">Email</label><input type="email" id="email" name="email" required autocomplete="email" placeholder="your@email.com" maxlength="254">
 <div class="ds-consent"><label class="ds-check"><input type="checkbox" name="consent_electronic" value="1" required id="consent_electronic"> I agree to use electronic records and signatures.</label><label class="ds-check"><input type="checkbox" name="agree_terms" value="1" required id="agree_terms"> I have read and agree to the terms above.</label></div>
+<label for="signature">Type your full legal name to sign</label><input type="text" id="signature" name="signature" required autocomplete="off" placeholder="Type your full legal name exactly" maxlength="200">
 {}<button type="submit" class="ds-btn" id="submit-btn" disabled>Sign</button></form></div>
 <p class="ds-note">By signing you acknowledge receipt. Records retained 7 years.</p></div></section>
-<script>(function(){{var f=document.getElementById('waiver-form');var b=document.getElementById('submit-btn');var c1=document.getElementById('consent_electronic');var c2=document.getElementById('agree_terms');var n=document.getElementById('full_name');var e=document.getElementById('email');var hasTurnstile=!!document.querySelector('.cf-turnstile');function chk(){{var base=c1&&c2&&n&&e&&c1.checked&&c2.checked&&n.value.trim()&&e.value.trim();b.disabled=hasTurnstile?!(base&&window.turnstileDone):!base;}}function bind(){{if(!f)return;c1.onchange=c2.onchange=chk;n.oninput=n.onchange=e.oninput=e.onchange=chk;window.turnstileCb=function(){{window.turnstileDone=true;chk();}};window.turnstileErr=function(){{var h=document.getElementById('turnstile-hint');if(h)h.style.display='block';}};window.turnstileDone=!hasTurnstile;chk();if(hasTurnstile){{setTimeout(function(){{if(!window.turnstileDone){{var h=document.getElementById('turnstile-hint');if(h)h.style.display='block';}}}},15000);}}}}(document.readyState==='loading'?document.addEventListener('DOMContentLoaded',bind):bind());}})();</script>"#,
+<script>(function(){{var f=document.getElementById('waiver-form');var b=document.getElementById('submit-btn');var c1=document.getElementById('consent_electronic');var c2=document.getElementById('agree_terms');var n=document.getElementById('full_name');var e=document.getElementById('email');var sig=document.getElementById('signature');var hasTurnstile=!!document.querySelector('.cf-turnstile');function chk(){{var base=c1&&c2&&n&&e&&sig&&c1.checked&&c2.checked&&n.value.trim()&&e.value.trim()&&sig.value.trim();b.disabled=hasTurnstile?!(base&&window.turnstileDone):!base;}}function bind(){{if(!f)return;c1.onchange=c2.onchange=chk;n.oninput=n.onchange=e.oninput=e.onchange=sig.oninput=sig.onchange=chk;window.turnstileCb=function(){{window.turnstileDone=true;chk();}};window.turnstileErr=function(){{var h=document.getElementById('turnstile-hint');if(h)h.style.display='block';}};window.turnstileDone=!hasTurnstile;chk();if(hasTurnstile){{setTimeout(function(){{if(!window.turnstileDone){{var h=document.getElementById('turnstile-hint');if(h)h.style.display='block';}}}},15000);}}}}(document.readyState==='loading'?document.addEventListener('DOMContentLoaded',bind):bind());}})();</script>"#,
         v0, turnstile_widget
     );
     (jar, Html(format!("{}{}{}{}", f70("Waiver | OakilyDokily", "Sign the OakilyDokily service waiver and liability release before engaging our veterinary professional services.", "waiver", &extra_head), head::f90(&auth_link), content, FOOTER))).into_response()
@@ -104,7 +105,7 @@ fn html_escape_attr(s: &str) -> String {
         .replace('"', "&quot;")
 }
 
-/// t73 = WaiverForm. s73=full_name s74=email s75=consent_electronic s76=agree_terms s77=cf_turnstile_response
+/// t73 = WaiverForm. s73=full_name s74=email s75=consent_electronic s76=agree_terms s77=cf_turnstile_response s78=signature
 #[derive(serde::Deserialize)]
 pub struct t73 {
     #[serde(rename = "full_name")]
@@ -117,6 +118,8 @@ pub struct t73 {
     pub s76: Option<String>,
     #[serde(rename = "cf-turnstile-response")]
     pub s77: Option<String>,
+    #[serde(rename = "signature")]
+    pub s78: Option<String>,
 }
 
 /// f76 = verify_turnstile
@@ -156,6 +159,7 @@ pub async fn f75(
     }
     let full_name = f.s73.trim();
     let email = f.s74.trim();
+    let signature = f.s78.as_deref().map(|s| s.trim()).unwrap_or("");
     match waiver::f77(full_name, email) {
         Ok(()) => {}
         Err("name empty" | "email empty") => {
@@ -164,6 +168,12 @@ pub async fn f75(
         Err(_) => {
             return (StatusCode::BAD_REQUEST, "Invalid input length").into_response();
         }
+    }
+    if signature.is_empty() {
+        return (StatusCode::BAD_REQUEST, "Signature is required").into_response();
+    }
+    if signature.len() > 200 {
+        return (StatusCode::BAD_REQUEST, "Signature too long").into_response();
     }
     if f.s75.as_deref() != Some("1") || f.s76.as_deref() != Some("1") {
         return (
@@ -197,7 +207,7 @@ pub async fn f75(
         email,
         Some(&v0),
         Some(&ua_str),
-        full_name,
+        signature,
     )
     .await
     {
