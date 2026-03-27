@@ -34,6 +34,16 @@ GOOGLE_CLIENT_SECRET=<from Google Cloud Console>
 APPLE_CLIENT_ID=<Services ID>
 APPLE_CLIENT_SECRET=<JWT, see §4>
 
+# Facebook OAuth (optional)
+FB_APP_ID=<from Facebook Developer Console>
+FB_APP_SECRET=<from Facebook Developer Console>
+
+# D1 sharded auth (optional — set OD_AUTH_D1=1 to enable)
+OD_AUTH_D1=1
+CLOUDFLARE_ACCOUNT_ID=<Cloudflare account ID>
+CLOUDFLARE_API_TOKEN=<Cloudflare API token with D1 access>
+OD_D1_SHARD_IDS=<comma-separated D1 database IDs>
+
 # Optional but recommended
 RESEND_API_KEY=<for waiver emails>
 RESEND_FROM=OakilyDokily <noreply@oakilydokily.com>

@@ -26,7 +26,7 @@ flowchart TD
 
 | Metric | Value |
 |--------|-------|
-| Lines of Rust | 3,122 (backend + mural-wasm) |
+| Lines of Rust | ~3,200 (backend + mural-wasm) |
 | WASM binary | 878 KB (mural-wasm.wasm) |
 | Auth providers | 4 (Google, Facebook, Apple, manual email/password) |
 | Waiver compliance | ESIGN-compliant, SHA256 terms versioning, 7-year retention |
@@ -41,14 +41,15 @@ flowchart TD
 | Interactive Mural | Macroquad 2D engine targeting wasm32 — pets wander, interact, respond to scroll |
 | Claymation Pipeline | Pure Rust: segment animals from mural → inpaint background → pixelate → rotate → composite |
 | Scroll-Triggered Scenes | Zero clicks required — pure scroll-driven storytelling with momentum physics |
-| Waiver System | Full audit trail: IP, User-Agent, terms hash, consent checkbox, signature. SQLite persistence |
+| Waiver System | Full audit trail: IP, User-Agent, terms hash, consent checkbox, signature. SQLite + gzip archive with auto-prune |
 | Multi-Auth Stack | Google/Facebook/Apple OAuth + manual signup. HMAC-SHA256 signed session cookies |
+| D1 Sharded Auth | Optional Cloudflare D1 backend — email-hash sharding across N databases |
 | Pixel Forge Integration | /api/forge SSH-dispatches to GPU node for AI sprite generation, LRU cached |
 
 ## How to Verify
 
 ```bash
-cargo build --release -p oakilydokily
+cargo build --release -p oakilydokily --features approuter
 # Open localhost:3000 — scroll the mural, watch pets interact
 # Visit /waiver — complete ESIGN flow
 # Visit /about — print-ready resume

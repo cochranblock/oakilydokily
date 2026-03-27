@@ -3,7 +3,7 @@
 
 > **It's not the Mech — it's the pilot.**
 >
-> This repo is part of [CochranBlock](https://cochranblock.org) — 8 Unlicense Rust repositories that power an entire company on a **single <10MB binary**, a laptop, and a **$10/month** Cloudflare tunnel. No AWS. No Kubernetes. No six-figure DevOps team. Zero cloud.
+> This repo is part of [CochranBlock](https://cochranblock.org) — 14 Unlicense Rust repositories that power an entire company on a **single <10MB binary**, a laptop, and a **$10/month** Cloudflare tunnel. No AWS. No Kubernetes. No six-figure DevOps team. Zero cloud.
 >
 > **[cochranblock.org](https://cochranblock.org)** is a live demo of this architecture. You're welcome to read every line of source code — it's all public domain.
 >
@@ -19,39 +19,52 @@
 
 # oakilydokily
 
-Hero site with interactive mural. Rust Axum server + mural-wasm (Macroquad).
+Veterinary professional services site with interactive mural, multi-auth, ESIGN-compliant waivers, and pixel forge sprite generation. Rust Axum server + mural-wasm (Macroquad WASM).
 
-## Proof of Artifacts
-
-*Wire diagrams and demos for quick review.*
-
-### Wire / Architecture
+## Architecture
 
 ```mermaid
-flowchart LR
-    User[User] --> Server[oakilydokily]
-    Server --> Pages[Pages: / /about etc]
-    Server --> Mural[mural-wasm embed]
-    Mural --> Pets[Pets + scroll-triggered scenes]
+flowchart TD
+    User[User] --> Axum[Axum Server :3000]
+    Axum --> Pages[Pages: Home / About / Contact / Waiver]
+    Axum --> Auth[OAuth: Google / Facebook / Apple / Manual]
+    Axum --> WASM[mural-wasm Canvas]
+    WASM --> Pets[Pet Entities: wander / sleep / interact]
+    WASM --> Scenes[Scroll Scenes: Cozy Nook / Tubing / Doggy Door]
+    Axum --> Forge[/api/forge → Pixel Forge SSH to GPU node]
+    Axum --> Waiver[Waiver System]
+    Waiver --> SQLite[(SQLite WAL)]
+    Auth --> D1[Cloudflare D1 sharded auth — optional]
+    Auth --> SQLite
 ```
 
-### Screenshots
+## Modules
 
-| View | Description |
-|------|-------------|
-| Hero | Landing with mural embed |
-| Mural | Interactive pets, Cozy Nook, Winter Tubing, Doggy Door |
-
-### Demo
-
-*Add `docs/artifacts/demo-scroll.gif` for scroll + mural interaction.*
-
----
+| Module | Purpose |
+|--------|---------|
+| `src/main.rs` | Entry point, approuter registration, server bind |
+| `src/waiver.rs` | SQLite waiver persistence, gzip archive, user CRUD |
+| `src/d1_auth.rs` | Sharded Cloudflare D1 auth storage (optional) |
+| `src/web/router.rs` | All routes: pages, auth, waiver, forge, assets |
+| `src/web/auth.rs` | Google/Facebook/Apple OAuth + manual email/password |
+| `src/web/pages.rs` | Home, about, contact, sitemap |
+| `src/web/waiver.rs` | Waiver form GET/POST, Turnstile verification |
+| `src/web/email.rs` | Gmail API + Resend fallback for waiver confirmation |
+| `src/web/forge.rs` | /api/forge — SSH to GPU node for AI sprite generation |
+| `src/web/head.rs` | GA4, nav, shared HTML head helpers |
+| `src/web/assets.rs` | Static asset serving via rust-embed |
+| `mural-wasm/` | Macroquad 2D mural targeting wasm32 |
 
 ## Run
 
 ```bash
 cargo run -p oakilydokily --features approuter
+```
+
+Build release:
+
+```bash
+cargo build --release -p oakilydokily --features approuter
 ```
 
 ## mural-wasm

@@ -5,6 +5,8 @@
 
 Tokenization for traceability. Aligns with kova fN/tN convention.
 
+> **Note:** Some tokens (f78-f82, f95-f96) are reused across modules (d1_auth vs web/*). Context disambiguates.
+
 ## Functions (fN)
 
 | Token | Human name | Module |
@@ -60,11 +62,16 @@ Tokenization for traceability. Aligns with kova fN/tN convention.
 | f110 | waiver_confirmed | web/waiver |
 | f112 | terms_hash | waiver |
 | f113 | init_pool | waiver |
+| f113_memory | init_pool_memory | waiver |
 | f114 | insert | waiver |
 | f115 | terms_text | waiver |
 | f116 | user_create | waiver |
 | f117 | user_get | waiver |
 | f118 | hash_email | web/auth |
+| f118 | archive_write | waiver |
+| f119 | archive_read | waiver |
+| f120 | archive_prune | waiver |
+| — | forge handler | web/forge |
 | f119 | window_conf | mural-wasm/main |
 | f120 | landscape_load | mural-wasm/landscape |
 | f121 | SpriteSheet::load | mural-wasm/sprites |
@@ -95,6 +102,9 @@ Tokenization for traceability. Aligns with kova fN/tN convention.
 | t78 | D1AuthClient |
 | t82 | GoogleUser |
 | t83 | OAuth callback query |
+| — | ForgeRequest | web/forge |
+| — | ForgeCache | web/forge |
+| — | D1Error | d1_auth |
 | t119 | Species | mural-wasm/sprites |
 | t120 | Animation | mural-wasm/sprites |
 | t121 | SpriteSheet | mural-wasm/sprites |
@@ -108,12 +118,18 @@ Tokenization for traceability. Aligns with kova fN/tN convention.
 
 | Token | Type | Field |
 |-------|------|-------|
+| s0 | t0 (AppState) | waiver pool |
+| s1 | t0 (AppState) | D1 auth client (optional) |
+| s2 | t0 (AppState) | forge cache |
 | s73 | SceneState | cozy_nook_visible |
 | s74 | SceneState | cozy_nook_x |
 | s75 | SceneState | tubing_visible |
 | s76 | SceneState | tubing_y |
 | s77 | SceneState | tubing_vel |
 | s78 | SceneState | doggy_door_triggered |
+| s78 | t78 (D1AuthClient) | account_id |
+| s79 | t78 (D1AuthClient) | token |
+| s80 | t78 (D1AuthClient) | shard_ids |
 
 ## Test traceability
 
