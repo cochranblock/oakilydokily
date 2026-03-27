@@ -67,7 +67,7 @@ pub async fn f30() -> i32 {
             Ok(resp) => {
                 let code = resp.status().as_u16();
                 let body = resp.text().await.unwrap_or_default();
-                let ok = (code >= 200 && code < 300
+                let ok = ((200..300).contains(&code)
                     && (patterns.is_empty() || patterns.iter().any(|p| body.contains(*p))))
                     || (*path == "/waiver" && patterns.is_empty() && code == 303);
                 if ok {
