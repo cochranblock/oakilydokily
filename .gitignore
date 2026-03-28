@@ -18,3 +18,4 @@ mural-wasm/scripts/.pixel_art_cache/
 
 # Large source PNGs (not embedded in binary)
 assets-archive/
+data/

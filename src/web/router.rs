@@ -7,7 +7,7 @@ use axum::{routing::{get, post}, Router};
 use axum::response::Redirect;
 use tower_http::{compression::CompressionLayer, trace::TraceLayer};
 
-use super::{assets, auth, forge, pages, waiver};
+use super::{assets, auth, forge, govdocs, pages, waiver};
 use crate::AppState;
 
 /// f1 = router. Why: Single entry for all OD routes; state shared via Arc.
@@ -29,6 +29,18 @@ pub fn f1(state: AppState) -> Router {
         .route("/auth/signup", get(auth::f102).post(auth::f103))
         .route("/auth/logout", get(auth::f84))
         .route("/api/forge", post(forge::handler))
+        .route("/govdocs", get(govdocs::index))
+        .route("/govdocs/sbom", get(govdocs::sbom))
+        .route("/govdocs/security", get(govdocs::security))
+        .route("/govdocs/ssdf", get(govdocs::ssdf))
+        .route("/govdocs/supply-chain", get(govdocs::supply_chain))
+        .route("/govdocs/privacy", get(govdocs::privacy))
+        .route("/govdocs/fips", get(govdocs::fips))
+        .route("/govdocs/fedramp", get(govdocs::fedramp))
+        .route("/govdocs/cmmc", get(govdocs::cmmc))
+        .route("/govdocs/itar-ear", get(govdocs::itar_ear))
+        .route("/govdocs/accessibility", get(govdocs::accessibility))
+        .route("/govdocs/federal-use-cases", get(govdocs::federal_use_cases))
         .route("/health", get(pages::health))
         .route("/favicon.ico", get(|| async { Redirect::permanent("/assets/favicon.svg") }))
         .route("/sitemap.xml", get(pages::sitemap))
