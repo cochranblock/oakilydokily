@@ -70,3 +70,7 @@ cargo build --release -p oakilydokily --features approuter
 ## mural-wasm
 
 See [mural-wasm/README.md](mural-wasm/README.md) for the interactive mural crate.
+
+## Federal Compliance
+
+See [govdocs/](govdocs/) for EO 14028, NIST SP 800-218, FIPS, CMMC, and other federal compliance documentation.
