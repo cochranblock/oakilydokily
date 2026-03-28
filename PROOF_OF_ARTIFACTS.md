@@ -26,13 +26,16 @@ flowchart TD
 
 | Metric | Value |
 |--------|-------|
-| Lines of Rust | ~3,200 (backend + mural-wasm) |
+| Release binary | 9.1 MB (down from 42 MB after optimization) |
+| Lines of Rust | ~3,200 (2,443 backend + 755 mural-wasm) |
+| Direct dependencies | 26 (release), 27 (dev) |
 | WASM binary | 878 KB (mural-wasm.wasm) |
 | Auth providers | 4 (Google, Facebook, Apple, manual email/password) |
-| Waiver compliance | ESIGN-compliant, SHA256 terms versioning, 7-year retention |
+| Waiver compliance | ESIGN-compliant, SHA256 terms versioning, typed signature, 7-year retention |
 | Pet types | 3 (claymation, forged AI sprites, CC0 pixel art fallback) |
 | Scroll scenes | 3 (Cozy Nook, Winter Tubing, Doggy Door) |
 | Database | SQLite with WAL mode (production durability) |
+| Federal compliance docs | 11 (SBOM, SSDF, FIPS, CMMC, etc.) |
 
 ## Key Artifacts
 
@@ -46,12 +49,26 @@ flowchart TD
 | D1 Sharded Auth | Optional Cloudflare D1 backend — email-hash sharding across N databases |
 | Pixel Forge Integration | /api/forge SSH-dispatches to GPU node for AI sprite generation, LRU cached |
 
+## QA Results (2026-03-27)
+
+| Pass | Checks | Result |
+|------|--------|--------|
+| Triple Sims 1/3 | 25 checks (21 pass, 4 skip — auth-gated) | OK |
+| Triple Sims 2/3 | 25 checks | OK |
+| Triple Sims 3/3 | 25 checks | OK |
+| Clippy (release) | 0 warnings | Clean |
+| Clippy (tests) | 0 warnings | Clean |
+| Route coverage | 19 routes tested, 0 unexpected 404s | Pass |
+| Binary size | 9.1 MB release (strip + LTO) | Target met |
+
 ## How to Verify
 
 ```bash
 cargo build --release -p oakilydokily --features approuter
+ls -lh target/release/oakilydokily  # should be ~9 MB
+cargo run -p oakilydokily --bin oakilydokily-test --features tests
 # Open localhost:3000 — scroll the mural, watch pets interact
-# Visit /waiver — complete ESIGN flow
+# Visit /waiver — complete ESIGN flow with typed signature
 # Visit /about — print-ready resume
 ```
 

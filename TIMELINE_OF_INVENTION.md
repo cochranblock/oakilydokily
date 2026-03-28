@@ -10,6 +10,48 @@
 
 ## Entries
 
+### 2026-03-27 — Federal Compliance Documentation
+
+**What:** Full govdocs/ suite: SBOM (EO 14028), SSDF (NIST SP 800-218), supply chain, security posture, accessibility (Section 508), privacy impact, FIPS 140-2/3, FedRAMP, CMMC L1-2, ITAR/EAR, federal use cases.
+**Commit:** `5355134`
+**AI Role:** AI drafted all compliance docs. Human directed scope and verified claims against source code.
+
+### 2026-03-27 — User Story Analysis + Error UX
+
+**What:** Full user walkthrough analysis (USER_STORY_ANALYSIS.md). Waiver validation errors now return styled HTML pages instead of raw text. Added .env.example.
+**Commit:** `5220766`
+**AI Role:** AI conducted user story walkthrough and implemented error page fix. Human directed analysis scope.
+
+### 2026-03-27 — Binary Optimization: 42 MB → 9.1 MB
+
+**What:** Release binary cut from 42 MB to 9.1 MB. Removed rust-gmail dep (killed openssl chain), added strip/LTO/codegen-units=1, trimmed tokio features, removed 25 MB of unused source PNGs from embedded assets.
+**Commit:** `19f481b`
+**AI Role:** AI audited dependency tree and identified bloat sources. Human approved removals.
+
+### 2026-03-27 — Mobile CSS + 480px Breakpoint
+
+**What:** Added phone-width (480px) breakpoint for iPhone SE / small Android. Full-width CTAs, compact nav, tighter padding.
+**Commit:** `46db290`
+**AI Role:** AI identified missing breakpoint and implemented responsive rules.
+
+### 2026-03-27 — Waiver: Signature Field + 7-Year Retention + Signup Routes
+
+**What:** Added dedicated signature input (ESIGN: typed name separate from full_name). Fixed archive_prune from 365 → 2557 days. Wired /auth/signup routes. Added email format validation.
+**Commit:** `79d816d`
+**AI Role:** AI audited ESIGN compliance and implemented fixes. Human directed legal requirements.
+
+### 2026-03-27 — QA Round 1: Clippy + Triple Sims
+
+**What:** Fixed clippy warning (Range::contains). Full health check: release build clean, triple sims 3/3, all routes verified.
+**Commit:** `5576efe`
+**AI Role:** AI ran full QA pass and fixed warning.
+
+### 2026-03-27 — Docs Update: README, Compression Map, Production Checklist
+
+**What:** Updated README (14 repos, architecture diagram, module table). Added D1 auth + forge entries to compression map. Added missing env vars to PRODUCTION.md.
+**Commit:** `3a9a547`
+**AI Role:** AI audited docs against code and fixed stale references.
+
 ### 2026-03-22 — Pixel Forge Mural Integration
 
 **What:** /api/forge endpoint — SSH dispatches to GPU node for AI sprite generation. WASM loads forged sprites dynamically.
