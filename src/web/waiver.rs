@@ -145,6 +145,23 @@ async fn f76(token: &str, remoteip: &str, secret: &str) -> bool {
     }
 }
 
+/// f75_error = styled error page for waiver validation failures.
+fn f75_error(msg: &str, _jar: CookieJar) -> axum::response::Response {
+    let auth_link = head::f89(None);
+    let body = format!(
+        r#"<section class="ds-waiver"><div class="ds-doc"><h1 class="ds-title">Unable to sign waiver</h1><p class="ds-intro" style="color:var(--warm);">{}</p><p><a href="/waiver" class="ds-btn">Go back and try again</a></p></div></section>"#,
+        html_escape_attr(msg)
+    );
+    let html = format!(
+        "{}{}{}{}",
+        f70("Error | OakilyDokily", "There was a problem signing your waiver.", "waiver", &head::f80()),
+        head::f90(&auth_link),
+        body,
+        FOOTER
+    );
+    (StatusCode::BAD_REQUEST, Html(html)).into_response()
+}
+
 /// f75 = post_waiver. Why: Validates form, stores waiver, sends email, redirects to confirmed. Requires auth.
 pub async fn f75(
     State(s): State<Arc<AppState>>,
@@ -163,35 +180,30 @@ pub async fn f75(
     match waiver::f77(full_name, email) {
         Ok(()) => {}
         Err("name empty" | "email empty") => {
-            return (StatusCode::BAD_REQUEST, "Missing required fields").into_response();
+            return f75_error("Please fill in both your name and email address.", jar);
+        }
+        Err("email invalid") => {
+            return f75_error("Please enter a valid email address.", jar);
         }
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, "Invalid input length").into_response();
+            return f75_error("Name or email is too long. Please shorten and try again.", jar);
         }
     }
     if signature.is_empty() {
-        return (StatusCode::BAD_REQUEST, "Signature is required").into_response();
+        return f75_error("Please type your full legal name in the signature field.", jar);
     }
     if signature.len() > 200 {
-        return (StatusCode::BAD_REQUEST, "Signature too long").into_response();
+        return f75_error("Signature is too long.", jar);
     }
     if f.s75.as_deref() != Some("1") || f.s76.as_deref() != Some("1") {
-        return (
-            StatusCode::BAD_REQUEST,
-            "You must consent to electronic signing and agree to the terms",
-        )
-            .into_response();
+        return f75_error("You must check both consent boxes before signing.", jar);
     }
     if let Ok(secret) = std::env::var("TURNSTILE_SECRET_KEY") {
         if !secret.is_empty() {
             let token = f.s77.as_deref().unwrap_or("");
             let remoteip = f72(addr, &headers);
             if token.is_empty() || !f76(token, &remoteip, &secret).await {
-                return (
-                    StatusCode::BAD_REQUEST,
-                    "Security check failed. Please try again.",
-                )
-                    .into_response();
+                return f75_error("Security check failed. Please refresh and try again.", jar);
             }
         }
     }
@@ -218,11 +230,7 @@ pub async fn f75(
         }
         Err(e) => {
             tracing::error!("waiver insert failed: {}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Unable to save waiver. Please try again.",
-            )
-                .into_response()
+            f75_error("Unable to save your waiver. Please try again in a moment.", jar)
         }
     }
 }
