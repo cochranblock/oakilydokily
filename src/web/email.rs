@@ -27,7 +27,7 @@ pub fn f78(to: &str, full_name: &str, ref_id: &str) {
 }
 
 /// f78_gmail = send via Gmail API (service account + domain-wide delegation).
-/// impersonate_user = JWT sub (real Workspace user). from = From header (can be send-as alias).
+/// Uses reqwest + jsonwebtoken directly. No rust-gmail dep needed.
 fn f78_gmail(
     creds_path: &str,
     impersonate_user: &str,
@@ -42,43 +42,40 @@ fn f78_gmail(
         f79(full_name),
         f79(ref_id)
     );
-    if from == impersonate_user {
-        let client = rust_gmail::GmailClient::builder(creds_path, from)?.build_blocking()?;
-        client.send_email_blocking(to, subject, &content)?;
-    } else if let Err(e) =
-        f78_gmail_custom_from(creds_path, impersonate_user, from, to, subject, &content)
-    {
-        tracing::warn!(
-            "Gmail send as {} failed: {}. Retrying as {}.",
-            from,
-            e,
-            impersonate_user
-        );
-        let client =
-            rust_gmail::GmailClient::builder(creds_path, impersonate_user)?.build_blocking()?;
-        client.send_email_blocking(to, subject, &content).map_err(
-            |retry_e| -> Box<dyn std::error::Error + Send + Sync> {
-                format!(
-                    "send-as {} failed: {}; retry as {} failed: {}",
-                    from, e, impersonate_user, retry_e
-                )
-                .into()
-            },
-        )?;
+    let access_token = f78_gmail_token(creds_path, impersonate_user)?;
+    let mime = format!(
+        "From: {}\r\nTo: {}\r\nSubject: {}\r\nContent-Type: text/html; charset=utf-8\r\n\r\n{}\r\n",
+        from, to, subject, content
+    );
+    let raw = base64::Engine::encode(&base64::engine::general_purpose::URL_SAFE, mime.as_bytes());
+    let body = serde_json::json!({ "raw": raw });
+    let gmail_base = std::env::var("OD_GMAIL_API_BASE")
+        .unwrap_or_else(|_| "https://gmail.googleapis.com".into());
+    let send_url = format!(
+        "{}/gmail/v1/users/me/messages/send",
+        gmail_base.trim_end_matches('/')
+    );
+    let send_res = reqwest::blocking::Client::new()
+        .post(&send_url)
+        .query(&[("alt", "json")])
+        .bearer_auth(&access_token)
+        .json(&body)
+        .timeout(std::time::Duration::from_secs(15))
+        .send()?;
+    if !send_res.status().is_success() {
+        let status = send_res.status();
+        let err = send_res.text().unwrap_or_else(|_| "unknown".into());
+        return Err(format!("Gmail API {}: {}", status, err).into());
     }
     tracing::info!("Waiver confirmation email sent via Gmail to {}", to);
     Ok(())
 }
 
-/// f78_gmail_custom_from = send with From != impersonate (e.g. noreply@ send-as alias).
-fn f78_gmail_custom_from(
+/// f78_gmail_token = get OAuth2 access token via service account JWT.
+fn f78_gmail_token(
     creds_path: &str,
     impersonate_user: &str,
-    from: &str,
-    to: &str,
-    subject: &str,
-    content: &str,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
     let sa: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(creds_path)?)?;
     let client_email = sa["client_email"].as_str().ok_or("missing client_email")?;
     let private_key = sa["private_key"].as_str().ok_or("missing private_key")?;
@@ -117,34 +114,10 @@ fn f78_gmail_custom_from(
             return Err(format!("OAuth: {}", s).into());
         }
     }
-    let access_token = token_json["access_token"]
+    token_json["access_token"]
         .as_str()
-        .ok_or("missing access_token in token response")?;
-    let mime = format!(
-        "From: {}\r\nTo: {}\r\nSubject: {}\r\nContent-Type: text/html; charset=utf-8\r\n\r\n{}\r\n",
-        from, to, subject, content
-    );
-    let raw = base64::Engine::encode(&base64::engine::general_purpose::URL_SAFE, mime.as_bytes());
-    let body = serde_json::json!({ "raw": raw });
-    let gmail_base = std::env::var("OD_GMAIL_API_BASE")
-        .unwrap_or_else(|_| "https://gmail.googleapis.com".into());
-    let send_url = format!(
-        "{}/gmail/v1/users/me/messages/send",
-        gmail_base.trim_end_matches('/')
-    );
-    let send_res = reqwest::blocking::Client::new()
-        .post(&send_url)
-        .query(&[("alt", "json")])
-        .bearer_auth(access_token)
-        .json(&body)
-        .timeout(std::time::Duration::from_secs(15))
-        .send()?;
-    if !send_res.status().is_success() {
-        let status = send_res.status();
-        let err = send_res.text().unwrap_or_else(|_| "unknown".into());
-        return Err(format!("Gmail API {}: {}", status, err).into());
-    }
-    Ok(())
+        .map(String::from)
+        .ok_or_else(|| "missing access_token in token response".into())
 }
 
 /// f78_resend = send via Resend. Skips if RESEND_API_KEY unset.

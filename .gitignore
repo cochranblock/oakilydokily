@@ -15,3 +15,6 @@ mural-wasm/scripts/out_rust/
 
 # pixel art fetch cache (CatnDog)
 mural-wasm/scripts/.pixel_art_cache/
+
+# Large source PNGs (not embedded in binary)
+assets-archive/
