@@ -14,12 +14,12 @@ use crate::AppState;
 /// f70 = head. p3 = optional extra head (e.g. GA4)
 fn f70(p0: &str, p1: &str, p2: &str, p3: &str) -> String {
     format!(
-        r#"<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="{}"><title>{}</title><link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" sizes="32x32"><link rel="stylesheet" href="/assets/css/main.css">{}</head><body data-page="{}">"#,
+        r##"<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="{}"><meta name="theme-color" content="#0f1419"><title>{}</title><link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" sizes="32x32"><link rel="apple-touch-icon" href="/assets/favicon.svg"><link rel="manifest" href="/assets/manifest.json"><link rel="stylesheet" href="/assets/css/main.css">{}</head><body data-page="{}">"##,
         p1, p0, p3, p2
     )
 }
 
-const FOOTER: &str = r##"</main><footer class="footer"><nav class="footer-nav"><a href="/">Home</a><a href="/about">About</a><a href="/contact">Contact</a><a href="/waiver">Waiver</a></nav><p>&copy; 2026 OakilyDokily</p><p class="footer-cta"><a href="mailto:byrdkaylie34@gmail.com?subject=OakilyDokily%20Inquiry" class="btn btn-primary">Get in Touch</a></p></footer><script>(function(){var t=document.querySelector('.nav-toggle');var n=document.getElementById('nav-links');if(t&&n){t.onclick=function(){var o=n.classList.toggle('nav-open');t.setAttribute('aria-expanded',o);}}}());</script></body></html>"##;
+const FOOTER: &str = r##"</main><footer class="footer"><nav class="footer-nav"><a href="/">Home</a><a href="/about">About</a><a href="/contact">Contact</a><a href="/waiver">Waiver</a></nav><p>&copy; 2026 OakilyDokily</p><p class="footer-cta"><a href="mailto:byrdkaylie34@gmail.com?subject=OakilyDokily%20Inquiry" class="btn btn-primary">Get in Touch</a></p></footer><script>(function(){var t=document.querySelector('.nav-toggle');var n=document.getElementById('nav-links');if(t&&n){t.onclick=function(){var o=n.classList.toggle('nav-open');t.setAttribute('aria-expanded',o);}}}());if('serviceWorker' in navigator){navigator.serviceWorker.register('/assets/sw.js');}</script></body></html>"##;
 
 /// f73 = hero cover — CSS animated mural (pure server-side, zero JS)
 fn f73() -> &'static str {

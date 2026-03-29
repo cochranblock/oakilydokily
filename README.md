@@ -67,9 +67,24 @@ Build release:
 cargo build --release -p oakilydokily --features approuter
 ```
 
-## mural-wasm
+## Supported Platforms
 
-See [mural-wasm/README.md](mural-wasm/README.md) for the interactive mural crate.
+| Platform | Target | Method | Status |
+|----------|--------|--------|--------|
+| macOS ARM64 | `aarch64-apple-darwin` | Native | Shipping |
+| macOS Intel | `x86_64-apple-darwin` | Native | Supported |
+| Linux x86_64 | `x86_64-unknown-linux-gnu` | Remote (st) | Shipping |
+| Linux ARM64 | `aarch64-unknown-linux-gnu` | Cross | Supported |
+| Linux ARM 32 | `armv7-unknown-linux-gnueabihf` | Cross | Supported |
+| Android ARM64 | `aarch64-linux-android` | cargo-ndk | Scaffold |
+| iOS ARM64 | `aarch64-apple-ios` | Xcode | Scaffold |
+| Windows x86_64 | `x86_64-pc-windows-gnu` | Cross | Supported |
+| FreeBSD x86_64 | `x86_64-unknown-freebsd` | Cross | Supported |
+| RISC-V 64 | `riscv64gc-unknown-linux-gnu` | Cross | Supported |
+| IBM POWER | `powerpc64le-unknown-linux-gnu` | Cross | Supported |
+| PWA (any browser) | Service worker | Built-in | Shipping |
+
+Build all: `./scripts/build-all-targets.sh`
 
 ## Federal Compliance
 

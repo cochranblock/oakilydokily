@@ -12,6 +12,8 @@ pub mod screenshot;
 pub mod tests;
 #[cfg(all(target_os = "android", feature = "android"))]
 pub mod android;
+#[cfg(target_os = "ios")]
+pub mod ios;
 pub mod waiver;
 pub mod web;
 

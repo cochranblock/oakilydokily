@@ -28,7 +28,7 @@ fn f72(addr: SocketAddr, headers: &HeaderMap) -> String {
 /// f70 = head. p3 = optional extra head (e.g. Turnstile script)
 fn f70(p0: &str, p1: &str, p2: &str, p3: &str) -> String {
     format!(
-        r#"<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="{}"><title>{}</title><link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" sizes="32x32"><link rel="stylesheet" href="/assets/css/main.css">{}</head><body data-page="{}">"#,
+        r##"<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="{}"><meta name="theme-color" content="#0f1419"><title>{}</title><link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" sizes="32x32"><link rel="apple-touch-icon" href="/assets/favicon.svg"><link rel="manifest" href="/assets/manifest.json"><link rel="stylesheet" href="/assets/css/main.css">{}</head><body data-page="{}">"##,
         p1, p0, p3, p2
     )
 }

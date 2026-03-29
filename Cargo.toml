@@ -23,7 +23,7 @@ android = ["dep:jni"]
 [lib]
 name = "oakilydokily"
 path = "src/lib.rs"
-crate-type = ["lib", "cdylib"]
+crate-type = ["lib", "cdylib", "staticlib"]
 
 # Release binary: product only. Requires --features approuter.
 [[bin]]
