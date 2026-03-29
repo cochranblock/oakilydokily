@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Unlicense — cochranblock.org -->
+<!-- OakilyDokily Pocket Server: Rust web server + Android WebView -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.oakilydokily"
+    android:versionCode="1"
+    android:versionName="0.2.0">
+
+    <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="35" />
+
+    <!-- Server binds localhost only — no internet needed for core function -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <application
+        android:label="OakilyDokily"
+        android:icon="@mipmap/ic_launcher"
+        android:theme="@style/AppTheme"
+        android:usesCleartextTraffic="true"
+        android:extractNativeLibs="true">
+
+        <!-- Main activity: WebView pointing to localhost Rust server -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:configChanges="orientation|screenSize|keyboardHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Foreground service keeps Rust server alive -->
+        <service
+            android:name=".ServerService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
+    </application>
+</manifest>

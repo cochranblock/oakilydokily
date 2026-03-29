@@ -6,6 +6,11 @@ name = "oakilydokily"
 version = "0.2.0"
 edition = "2021"
 default-run = "oakilydokily"
+description = "Veterinary professional services site — ESIGN-compliant waivers, multi-auth, zero-cloud single binary"
+license = "Unlicense"
+repository = "https://github.com/cochranblock/oakilydokily"
+keywords = ["veterinary", "waiver", "esign", "axum", "zero-cloud"]
+categories = ["web-programming::http-server"]
 
 # tests = rough draft. exopack for quantifiable quality. Release strips both.
 # approuter = register with approuter on startup. Release binary only; -test never gets approuter-client.
@@ -13,10 +18,12 @@ default-run = "oakilydokily"
 default = []
 tests = ["exopack", "colored", "scraper"]
 approuter = ["dep:approuter-client"]
+android = ["dep:jni"]
 
 [lib]
 name = "oakilydokily"
 path = "src/lib.rs"
+crate-type = ["lib", "cdylib"]
 
 # Release binary: product only. Requires --features approuter.
 [[bin]]
@@ -58,6 +65,7 @@ bcrypt = "0.17"
 flate2 = "1"
 dirs = "5"
 colored = { version = "2", optional = true }
+jni = { version = "0.21", optional = true }
 scraper = { version = "0.19", optional = true }
 exopack = { git = "https://github.com/cochranblock/exopack", optional = true, features = ["screenshot", "interface", "triple_sims", "devtools"] }
 

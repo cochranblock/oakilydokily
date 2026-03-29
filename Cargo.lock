@@ -2485,6 +2485,7 @@ dependencies = [
  "exopack",
  "flate2",
  "hmac",
+ "jni",
  "jsonwebtoken",
  "mime_guess",
  "proptest",

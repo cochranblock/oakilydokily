@@ -10,6 +10,8 @@ pub mod mock_google;
 pub mod screenshot;
 #[cfg(feature = "tests")]
 pub mod tests;
+#[cfg(all(target_os = "android", feature = "android"))]
+pub mod android;
 pub mod waiver;
 pub mod web;
 
