@@ -10,6 +10,36 @@
 
 ## Entries
 
+### 2026-03-30 — Zero Downtime Hot Reload
+
+**What:** SO_REUSEPORT socket binding, PID lockfile management, SIGTERM/SIGKILL old instance. New binary binds port before killing old — zero dropped requests during deploy.
+**Commit:** (this commit)
+**AI Role:** AI implemented hot reload pattern. Human specified the deployment model.
+
+### 2026-03-30 — Supply Chain Security Audit
+
+**What:** Full EO 14028 audit: cargo audit (fixed RUSTSEC-2026-0049), duplicate dep analysis, deep code review (unsafe, network, crypto), file cleanup (removed 42 MB dead ONNX model). govdocs/SUPPLY_CHAIN_AUDIT.md.
+**Commit:** `db89576`
+**AI Role:** AI ran all audit tools and wrote findings. Human approved remediation.
+
+### 2026-03-29 — iOS + PWA + Multi-Arch (12 Targets)
+
+**What:** iOS scaffold (Swift WebView + Rust staticlib). PWA (manifest.json, service worker, offline-first). Multi-arch build script for 12 targets. Supported platforms table in README.
+**Commit:** `e56fc16`
+**AI Role:** AI created all platform scaffolds. Human directed architecture.
+
+### 2026-03-29 — Android AAB: 4.6 MB
+
+**What:** Full Gradle project, cargo-ndk build, JNI bridge, launcher icon. AAB builds successfully targeting API 35. Pocket Server: Rust web server + Android WebView.
+**Commits:** `0df7ec6`, `db89576`
+**AI Role:** AI built Gradle project and resolved NDK cross-compilation. Human directed Pocket Server architecture.
+
+### 2026-03-28 — Zero JavaScript: 2,496 Rust / 0 JS
+
+**What:** Removed all JavaScript (67 KB gl.js, mural-bridge.js, mural-wasm.wasm). Replaced WASM canvas with static mural + CSS gradient. Added /govdocs routes serving 11 compliance docs at runtime via include_str!.
+**Commit:** `cb0cbf6`
+**AI Role:** AI removed JS and added govdocs routes. Human approved zero-JS architecture.
+
 ### 2026-03-27 — Federal Compliance Documentation
 
 **What:** Full govdocs/ suite: SBOM (EO 14028), SSDF (NIST SP 800-218), supply chain, security posture, accessibility (Section 508), privacy impact, FIPS 140-2/3, FedRAMP, CMMC L1-2, ITAR/EAR, federal use cases.

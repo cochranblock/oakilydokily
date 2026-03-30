@@ -8,6 +8,8 @@
 # mural-wasm standalone (built/copied by build-standalone.sh)
 mural-wasm/mural-wasm.wasm
 mural-wasm/assets/
+mural-wasm/Cargo.lock
+mural-wasm/target/
 
 # claymation pipeline output
 mural-wasm/scripts/out_claymation/

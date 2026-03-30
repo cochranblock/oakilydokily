@@ -64,6 +64,8 @@ dotenvy = "0.15"
 bcrypt = "0.17"
 flate2 = "1"
 dirs = "5"
+socket2 = { version = "0.5", features = ["all"] }
+nix = { version = "0.29", features = ["signal"], default-features = false }
 colored = { version = "2", optional = true }
 jni = { version = "0.21", optional = true }
 scraper = { version = "0.19", optional = true }

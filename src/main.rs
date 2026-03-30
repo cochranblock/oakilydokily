@@ -7,7 +7,84 @@
 use approuter_client::{f116, RegisterConfig};
 use oakilydokily::web::router;
 use oakilydokily::{waiver, AppState};
-use std::path::Path;
+use std::path::{Path, PathBuf};
+
+/// PID lockfile path: ~/.local/share/oakilydokily/pid
+fn pid_path() -> PathBuf {
+    dirs::data_dir()
+        .map(|p| p.join("oakilydokily").join("pid"))
+        .unwrap_or_else(|| PathBuf::from("/tmp/oakilydokily.pid"))
+}
+
+/// Read old PID from lockfile. Returns None if file missing or unreadable.
+fn read_old_pid(path: &Path) -> Option<u32> {
+    std::fs::read_to_string(path)
+        .ok()
+        .and_then(|s| s.trim().parse().ok())
+}
+
+/// Write our PID to lockfile.
+fn write_pid(path: &Path) {
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    let _ = std::fs::write(path, format!("{}", std::process::id()));
+}
+
+/// SIGTERM the old process, wait up to 5s, SIGKILL if needed.
+fn kill_old(pid: u32) {
+    use nix::sys::signal::{kill, Signal};
+    use nix::unistd::Pid;
+
+    let nix_pid = Pid::from_raw(pid as i32);
+
+    // Check if process is alive
+    if kill(nix_pid, None).is_err() {
+        tracing::info!("hot-reload: old pid {} not running", pid);
+        return;
+    }
+
+    // Don't kill ourselves
+    if pid == std::process::id() {
+        return;
+    }
+
+    tracing::info!("hot-reload: SIGTERM → pid {}", pid);
+    let _ = kill(nix_pid, Signal::SIGTERM);
+
+    // Wait up to 5 seconds for graceful shutdown
+    for _ in 0..50 {
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        if kill(nix_pid, None).is_err() {
+            tracing::info!("hot-reload: pid {} exited gracefully", pid);
+            return;
+        }
+    }
+
+    // Force kill
+    tracing::warn!("hot-reload: SIGKILL → pid {} (did not exit in 5s)", pid);
+    let _ = kill(nix_pid, Signal::SIGKILL);
+    std::thread::sleep(std::time::Duration::from_millis(200));
+}
+
+/// Create a SO_REUSEPORT TCP listener via socket2, then convert to tokio.
+fn reuseport_listener(addr: &str) -> std::io::Result<std::net::TcpListener> {
+    let sock_addr: std::net::SocketAddr = addr.parse().map_err(|e| {
+        std::io::Error::new(std::io::ErrorKind::InvalidInput, e)
+    })?;
+    let domain = if sock_addr.is_ipv4() {
+        socket2::Domain::IPV4
+    } else {
+        socket2::Domain::IPV6
+    };
+    let socket = socket2::Socket::new(domain, socket2::Type::STREAM, Some(socket2::Protocol::TCP))?;
+    socket.set_reuse_address(true)?;
+    socket.set_reuse_port(true)?;
+    socket.set_nonblocking(true)?;
+    socket.bind(&sock_addr.into())?;
+    socket.listen(1024)?;
+    Ok(std::net::TcpListener::from(socket))
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -63,6 +140,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let bind = std::env::var("BIND").unwrap_or_else(|_| "0.0.0.0".into());
     let addr = format!("{}:{}", bind, port);
 
+    // --- Hot reload: bind with SO_REUSEPORT BEFORE killing old instance ---
+    let std_listener = reuseport_listener(&addr)?;
+    tracing::info!("hot-reload: bound {} with SO_REUSEPORT", addr);
+
+    // Register with approuter (new instance takes traffic)
     let app = router::router(AppState {
         s0: pool,
         s1: d1,
@@ -80,10 +162,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             .filter(|s| !s.is_empty())
             .collect(),
         backend_url: std::env::var("OD_BACKEND_URL")
-            .unwrap_or_else(|_| "http://127.0.0.1:3000".into()),
+            .unwrap_or_else(|_| format!("http://127.0.0.1:{}", port)),
     })
     .await;
-    let listener = tokio::net::TcpListener::bind(&addr).await?;
+
+    // --- Kill old instance AFTER we're bound and registered ---
+    let pid_file = pid_path();
+    if let Some(old_pid) = read_old_pid(&pid_file) {
+        kill_old(old_pid);
+    }
+    write_pid(&pid_file);
+    tracing::info!("hot-reload: pid {} written to {}", std::process::id(), pid_file.display());
+
+    // Convert to tokio listener and serve
+    let listener = tokio::net::TcpListener::from_std(std_listener)?;
     tracing::info!("oakilydokily listening on http://{}", addr);
     axum::serve(
         listener,

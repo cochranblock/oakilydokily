@@ -26,30 +26,29 @@ flowchart TD
 
 | Metric | Value |
 |--------|-------|
-| Release binary | 9.1 MB (down from 42 MB after optimization) |
-| Lines of Rust | ~3,200 (2,443 backend + 755 mural-wasm) |
-| Direct dependencies | 26 (release), 27 (dev) |
-| WASM binary | 878 KB (mural-wasm.wasm) |
+| Release binary | 8.8 MB (down from 42 MB — strip, LTO, zero JS) |
+| Lines of Rust | 2,679 (backend) + 755 (mural-wasm, archived) |
+| JavaScript | 0 lines (removed all JS/WASM) |
+| Direct dependencies | 28 (release) |
+| Android AAB | 4.6 MB (Pocket Server) |
+| Platforms | 12 targets (macOS, Linux, Android, iOS, Windows, FreeBSD, RISC-V, POWER, PWA) |
 | Auth providers | 4 (Google, Facebook, Apple, manual email/password) |
 | Waiver compliance | ESIGN-compliant, SHA256 terms versioning, typed signature, 7-year retention |
-| Pet types | 3 (claymation, forged AI sprites, CC0 pixel art fallback) |
-| Scroll scenes | 3 (Cozy Nook, Winter Tubing, Doggy Door) |
 | Database | SQLite with WAL mode (production durability) |
-| Federal compliance docs | 11 (SBOM, SSDF, FIPS, CMMC, etc.) |
+| Federal compliance docs | 12 (SBOM, SSDF, FIPS, CMMC, supply chain audit, etc.) |
+| Hot reload | Zero downtime deploy via SO_REUSEPORT + PID lockfile |
 
 ## Key Artifacts
 
 | Artifact | Description |
 |----------|-------------|
-| Interactive Mural | Macroquad 2D engine targeting wasm32 — pets wander, interact, respond to scroll |
-| Claymation Pipeline | Pure Rust: segment animals from mural → inpaint background → pixelate → rotate → composite |
-| Scroll-Triggered Scenes | Zero clicks required — pure scroll-driven storytelling with momentum physics |
+| Static Mural | Server-rendered mural image with CSS gradient overlay (zero JS) |
 | Waiver System | Full audit trail: IP, User-Agent, terms hash, consent checkbox, signature. SQLite + gzip archive with auto-prune |
 | Multi-Auth Stack | Google/Facebook/Apple OAuth + manual signup. HMAC-SHA256 signed session cookies |
 | D1 Sharded Auth | Optional Cloudflare D1 backend — email-hash sharding across N databases |
 | Pixel Forge Integration | /api/forge SSH-dispatches to GPU node for AI sprite generation, LRU cached |
 
-## QA Results (2026-03-27)
+## QA Results (2026-03-30)
 
 | Pass | Checks | Result |
 |------|--------|--------|
@@ -59,7 +58,9 @@ flowchart TD
 | Clippy (release) | 0 warnings | Clean |
 | Clippy (tests) | 0 warnings | Clean |
 | Route coverage | 19 routes tested, 0 unexpected 404s | Pass |
-| Binary size | 9.1 MB release (strip + LTO) | Target met |
+| Binary size | 8.8 MB release (strip + LTO + zero JS) | Target met |
+| Supply chain audit | 1 CVE fixed, 0 in release binary | Pass |
+| Android AAB | 4.6 MB builds successfully | Pass |
 
 ## How to Verify
 
