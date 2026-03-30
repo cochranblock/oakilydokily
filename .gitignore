@@ -19,3 +19,17 @@ mural-wasm/scripts/.pixel_art_cache/
 # Large source PNGs (not embedded in binary)
 assets-archive/
 data/
+*.DS_Store
+*.log
+*.safetensors
+*.onnx
+models/
+
+# Android build artifacts
+android/build/
+android/app/build/
+android/app/src/main/jniLibs/
+android/.gradle/
+android/gradle/
+android/gradlew
+android/gradlew.bat
