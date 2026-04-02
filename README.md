@@ -19,7 +19,7 @@
 
 # oakilydokily
 
-Veterinary professional services site with interactive mural, multi-auth, ESIGN-compliant waivers, and pixel forge sprite generation. Rust Axum server + mural-wasm (Macroquad WASM).
+Veterinary professional services site with multi-auth, ESIGN-compliant waivers, and federal compliance docs. Rust Axum server. Pixel forge sprite generation coming soon via [pixel-forge](https://github.com/cochranblock/pixel-forge) + IRONHIVE cluster.
 
 ## Architecture
 
@@ -31,7 +31,8 @@ flowchart TD
     Axum --> WASM[mural-wasm Canvas]
     WASM --> Pets[Pet Entities: wander / sleep / interact]
     WASM --> Scenes[Scroll Scenes: Cozy Nook / Tubing / Doggy Door]
-    Axum --> Forge[/api/forge → Pixel Forge SSH to GPU node]
+    Axum -.-> Forge["/api/forge → Coming Soon — pixel-forge"]
+    Forge -.-> GPU["IRONHIVE GPU node — Coming Soon — kova C2"]
     Axum --> Waiver[Waiver System]
     Waiver --> SQLite[(SQLite WAL)]
     Auth --> D1[Cloudflare D1 sharded auth — optional]
@@ -50,10 +51,20 @@ flowchart TD
 | `src/web/pages.rs` | Home, about, contact, sitemap |
 | `src/web/waiver.rs` | Waiver form GET/POST, Turnstile verification |
 | `src/web/email.rs` | Gmail API + Resend fallback for waiver confirmation |
-| `src/web/forge.rs` | /api/forge — SSH to GPU node for AI sprite generation |
+| `src/web/forge.rs` | /api/forge — Coming Soon — waiting on [pixel-forge](https://github.com/cochranblock/pixel-forge) |
 | `src/web/head.rs` | GA4, nav, shared HTML head helpers |
 | `src/web/assets.rs` | Static asset serving via rust-embed |
-| `mural-wasm/` | Macroquad 2D mural targeting wasm32 |
+| `mural-wasm/` | Macroquad 2D mural targeting wasm32 (archived — static mural active) |
+
+## Dependencies on Other CochranBlock Projects
+
+| Feature | Depends On | Status |
+|---------|-----------|--------|
+| Reverse proxy registration | [approuter](https://github.com/cochranblock/approuter) | Active — `--features approuter` |
+| AI sprite generation (`/api/forge`) | [pixel-forge](https://github.com/cochranblock/pixel-forge) | Coming Soon — waiting on [pixel-forge](https://github.com/cochranblock/pixel-forge) |
+| IRONHIVE GPU cluster (forge backend) | [kova](https://github.com/cochranblock/kova) C2 nodes | Coming Soon — waiting on [kova](https://github.com/cochranblock/kova) |
+| Production hosting | [approuter](https://github.com/cochranblock/approuter) + Cloudflare tunnel | Active |
+| Android pocket server | [pocket-server](https://github.com/cochranblock/pocket-server) scaffold | Coming Soon — waiting on [pocket-server](https://github.com/cochranblock/pocket-server) |
 
 ## Run
 
