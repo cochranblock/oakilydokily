@@ -10,6 +10,12 @@
 
 ## Entries
 
+### 2026-04-03 — P23 Triple Lens Synthesis: Pyramid Architecture Risk/Opportunity
+
+**What:** Ran P23 Triple Lens Research Protocol across the fleet to assess the [kova](https://github.com/cochranblock/kova) pyramid architecture (subatomic model inference, mmap'd shared weights, tournament training, IRONHIVE GPU cluster). Three panes: rogue-repo (optimist), ronin-sites (pessimist), illbethejudgeofthat (paranoia). Synthesis produced from oakilydokily pane. Key findings: (1) infrastructure is real — 10K+ lines, 3 trained models, working tournament, (2) mmap'd nanobyte format needs Ed25519 signature and offset bounds checking before ship, (3) confidence calibration is the silent killer — overconfident T1 means wrong answers never escalate, (4) never delete the Claude API key — graduate to "Claude-rare" not "Claude-impossible", (5) training corpus (crates.io) needs filtering (min downloads, known-author whitelist). One-sentence verdict: solid machine, no locks on the doors.
+**Commit:** (this commit)
+**AI Role:** AI ran optimist/paranoia analysis and synthesized all three lenses. Human directed the P23 protocol and dispatched panes.
+
 ### 2026-04-02 — Async I/O, Rate Limiting, Dead Code Cleanup, Docs Truth Audit
 
 **What:** Fixed 8 instances of `reqwest::blocking::Client` in async handlers (auth.rs, email.rs) — replaced with async `reqwest::Client`. Added IP-based rate limiting (10/60s) on login and signup endpoints. Email confirmation failures now surfaced to user on waiver confirmed page. Removed `#![allow(dead_code)]` from all 9 source files, 0 clippy warnings. Removed `"blocking"` feature from reqwest dep. Full docs truth audit: README, POA, TOI updated to match code. Fixed false "separate repo" claim in CLAUDE.md. Updated mermaid diagrams to show static mural (not WASM). Forge status corrected from "Coming Soon" to "Implemented". Added supply-chain-audit govdocs route. Added Production Features section to README. Cross-linked all sibling repos.
