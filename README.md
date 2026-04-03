@@ -19,7 +19,7 @@
 
 # oakilydokily
 
-Veterinary professional services site with multi-auth, ESIGN-compliant waivers, and federal compliance docs. Rust Axum server. Pixel forge sprite generation coming soon via [pixel-forge](https://github.com/cochranblock/pixel-forge) + IRONHIVE cluster.
+Veterinary professional services site with multi-auth, ESIGN-compliant waivers, and federal compliance docs. Rust Axum server. AI sprite generation at `/api/forge` via SSH to [pixel-forge](https://github.com/cochranblock/pixel-forge) on [kova](https://github.com/cochranblock/kova) GPU nodes.
 
 ## Architecture
 
@@ -29,8 +29,8 @@ flowchart TD
     Axum --> Pages[Pages: Home / About / Contact / Waiver]
     Axum --> Auth[OAuth: Google / Facebook / Apple / Manual]
     Axum --> Mural[Static Mural — CSS animated hero image]
-    Axum -.-> Forge["/api/forge — Coming Soon — pixel-forge"]
-    Forge -.-> GPU["IRONHIVE GPU node — Coming Soon — kova C2"]
+    Axum --> Forge["/api/forge → pixel-forge SSH"]
+    Forge --> GPU["IRONHIVE GPU node — kova C2"]
     Axum --> Waiver[Waiver System]
     Waiver --> SQLite[(SQLite WAL)]
     Auth --> D1[Cloudflare D1 sharded auth — optional]
@@ -49,7 +49,7 @@ flowchart TD
 | `src/web/pages.rs` | Home, about, contact, sitemap |
 | `src/web/waiver.rs` | Waiver form GET/POST, Turnstile verification |
 | `src/web/email.rs` | Gmail API + Resend fallback for waiver confirmation |
-| `src/web/forge.rs` | /api/forge — Coming Soon — waiting on [pixel-forge](https://github.com/cochranblock/pixel-forge) |
+| `src/web/forge.rs` | /api/forge — SSH to [pixel-forge](https://github.com/cochranblock/pixel-forge) on GPU node for AI sprite generation |
 | `src/web/head.rs` | GA4, nav, shared HTML head helpers |
 | `src/web/assets.rs` | Static asset serving via rust-embed |
 | `mural-wasm/` | Macroquad 2D mural targeting wasm32 (archived — static mural active) |
@@ -59,10 +59,11 @@ flowchart TD
 | Feature | Depends On | Status |
 |---------|-----------|--------|
 | Reverse proxy registration | [approuter](https://github.com/cochranblock/approuter) | Active — `--features approuter` |
-| AI sprite generation (`/api/forge`) | [pixel-forge](https://github.com/cochranblock/pixel-forge) | Coming Soon — waiting on [pixel-forge](https://github.com/cochranblock/pixel-forge) |
-| IRONHIVE GPU cluster (forge backend) | [kova](https://github.com/cochranblock/kova) C2 nodes | Coming Soon — waiting on [kova](https://github.com/cochranblock/kova) |
+| AI sprite generation (`/api/forge`) | [pixel-forge](https://github.com/cochranblock/pixel-forge) | Implemented — requires pixel-forge binary on GPU node |
+| IRONHIVE GPU cluster (forge backend) | [kova](https://github.com/cochranblock/kova) C2 nodes | Implemented — SSH dispatch to node `gd` |
 | Production hosting | [approuter](https://github.com/cochranblock/approuter) + Cloudflare tunnel | Active |
-| Android pocket server | [pocket-server](https://github.com/cochranblock/pocket-server) scaffold | Coming Soon — waiting on [pocket-server](https://github.com/cochranblock/pocket-server) |
+| Test framework ([exopack](https://github.com/cochranblock/exopack)) | [exopack](https://github.com/cochranblock/exopack) | Active — `--features tests` |
+| Android pocket server | [pocket-server](https://github.com/cochranblock/pocket-server) scaffold | Scaffold — waiting on [pocket-server](https://github.com/cochranblock/pocket-server) |
 
 ## Run
 
@@ -75,6 +76,8 @@ Build release:
 ```bash
 cargo build --release -p oakilydokily --features approuter
 ```
+
+See [`.env.example`](.env.example) for all configuration options.
 
 ## Supported Platforms
 
@@ -95,6 +98,17 @@ cargo build --release -p oakilydokily --features approuter
 
 Build all: `./scripts/build-all-targets.sh`
 
+## Production Features
+
+| Feature | Details |
+|---------|---------|
+| Hot reload | SO_REUSEPORT socket binding + PID lockfile — zero dropped requests on deploy |
+| Rate limiting | 10 requests/IP/60s on auth endpoints, HTTP 429 on exceed |
+| Session signing | HMAC-SHA256 signed cookies, 7-day expiry, HttpOnly + Secure |
+| Async HTTP | All external calls (OAuth, email) use async reqwest — no blocking I/O |
+| Waiver retention | 7-year (2,557 days) gzip archive with auto-prune |
+| Turnstile CAPTCHA | Optional Cloudflare Turnstile on waiver form |
+
 ## Federal Compliance
 
-See [govdocs/](govdocs/) for EO 14028, NIST SP 800-218, FIPS, CMMC, and other federal compliance documentation.
+See [govdocs/](govdocs/) for EO 14028, NIST SP 800-218, FIPS, CMMC, supply chain audit, and other federal compliance documentation (12 docs, all served at `/govdocs/*`).

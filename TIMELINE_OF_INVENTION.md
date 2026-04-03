@@ -10,6 +10,18 @@
 
 ## Entries
 
+### 2026-04-02 — Async I/O, Rate Limiting, Dead Code Cleanup, Docs Truth Audit
+
+**What:** Fixed 8 instances of `reqwest::blocking::Client` in async handlers (auth.rs, email.rs) — replaced with async `reqwest::Client`. Added IP-based rate limiting (10/60s) on login and signup endpoints. Email confirmation failures now surfaced to user on waiver confirmed page. Removed `#![allow(dead_code)]` from all 9 source files, 0 clippy warnings. Removed `"blocking"` feature from reqwest dep. Full docs truth audit: README, POA, TOI updated to match code. Fixed false "separate repo" claim in CLAUDE.md. Updated mermaid diagrams to show static mural (not WASM). Forge status corrected from "Coming Soon" to "Implemented". Added supply-chain-audit govdocs route. Added Production Features section to README. Cross-linked all sibling repos.
+**Commits:** `7575531`, (this commit)
+**AI Role:** AI executed full guest analysis, identified bugs via code audit, implemented all fixes. Human directed priorities and approved plan.
+
+### 2026-04-02 — Dependency Chain Visibility
+
+**What:** Added "Dependencies on Other CochranBlock Projects" table to README. All cross-project dependencies now link to `github.com/cochranblock/{project}`. Updated mermaid diagrams.
+**Commit:** `1470bdd`
+**AI Role:** AI implemented. Human directed the linking pattern.
+
 ### 2026-03-30 — Zero Downtime Hot Reload
 
 **What:** SO_REUSEPORT socket binding, PID lockfile management, SIGTERM/SIGKILL old instance. New binary binds port before killing old — zero dropped requests during deploy.

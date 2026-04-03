@@ -16,6 +16,7 @@ const CMMC: &str = include_str!("../../govdocs/CMMC.md");
 const ITAR_EAR: &str = include_str!("../../govdocs/ITAR_EAR.md");
 const ACCESSIBILITY: &str = include_str!("../../govdocs/ACCESSIBILITY.md");
 const FEDERAL_USE: &str = include_str!("../../govdocs/FEDERAL_USE_CASES.md");
+const SUPPLY_CHAIN_AUDIT: &str = include_str!("../../govdocs/SUPPLY_CHAIN_AUDIT.md");
 
 fn render(title: &str, md: &str) -> Html<String> {
     let escaped = md
@@ -31,7 +32,7 @@ fn render(title: &str, md: &str) -> Html<String> {
 /// GET /govdocs — index of all compliance documents
 pub async fn index() -> Html<String> {
     Html(format!(
-        r#"<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Federal Compliance | OakilyDokily</title><style>body{{font-family:system-ui,sans-serif;background:#0f1419;color:#e6edf3;max-width:800px;margin:0 auto;padding:2rem 1rem;line-height:1.6}}a{{color:#a855f7;text-decoration:none}}a:hover{{text-decoration:underline}}h1{{border-bottom:1px solid rgba(168,85,247,0.25);padding-bottom:0.5rem}}li{{margin:0.5rem 0}}.nav{{margin-bottom:2rem;font-size:0.9rem}}.nav a{{margin-right:1rem}}</style></head><body><div class="nav"><a href="/">Home</a></div><h1>Federal Compliance Documents</h1><p>The binary IS the compliance artifact. These documents are embedded at compile time.</p><ul><li><a href="/govdocs/sbom">SBOM</a> — Software Bill of Materials (EO 14028)</li><li><a href="/govdocs/security">Security Posture</a></li><li><a href="/govdocs/ssdf">SSDF</a> — NIST SP 800-218</li><li><a href="/govdocs/supply-chain">Supply Chain Integrity</a></li><li><a href="/govdocs/privacy">Privacy Impact Assessment</a></li><li><a href="/govdocs/fips">FIPS 140-2/3 Status</a></li><li><a href="/govdocs/fedramp">FedRAMP Notes</a></li><li><a href="/govdocs/cmmc">CMMC Level 1-2</a></li><li><a href="/govdocs/itar-ear">ITAR/EAR Export Control</a></li><li><a href="/govdocs/accessibility">Section 508 / WCAG</a></li><li><a href="/govdocs/federal-use-cases">Federal Use Cases</a></li></ul><p><small>Binary: oakilydokily v{}</small></p></body></html>"#,
+        r#"<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Federal Compliance | OakilyDokily</title><style>body{{font-family:system-ui,sans-serif;background:#0f1419;color:#e6edf3;max-width:800px;margin:0 auto;padding:2rem 1rem;line-height:1.6}}a{{color:#a855f7;text-decoration:none}}a:hover{{text-decoration:underline}}h1{{border-bottom:1px solid rgba(168,85,247,0.25);padding-bottom:0.5rem}}li{{margin:0.5rem 0}}.nav{{margin-bottom:2rem;font-size:0.9rem}}.nav a{{margin-right:1rem}}</style></head><body><div class="nav"><a href="/">Home</a></div><h1>Federal Compliance Documents</h1><p>The binary IS the compliance artifact. These documents are embedded at compile time.</p><ul><li><a href="/govdocs/sbom">SBOM</a> — Software Bill of Materials (EO 14028)</li><li><a href="/govdocs/security">Security Posture</a></li><li><a href="/govdocs/ssdf">SSDF</a> — NIST SP 800-218</li><li><a href="/govdocs/supply-chain">Supply Chain Integrity</a></li><li><a href="/govdocs/supply-chain-audit">Supply Chain Audit</a></li><li><a href="/govdocs/privacy">Privacy Impact Assessment</a></li><li><a href="/govdocs/fips">FIPS 140-2/3 Status</a></li><li><a href="/govdocs/fedramp">FedRAMP Notes</a></li><li><a href="/govdocs/cmmc">CMMC Level 1-2</a></li><li><a href="/govdocs/itar-ear">ITAR/EAR Export Control</a></li><li><a href="/govdocs/accessibility">Section 508 / WCAG</a></li><li><a href="/govdocs/federal-use-cases">Federal Use Cases</a></li></ul><p><small>Binary: oakilydokily v{}</small></p></body></html>"#,
         env!("CARGO_PKG_VERSION")
     ))
 }
@@ -47,3 +48,4 @@ pub async fn cmmc() -> Html<String> { render("CMMC", CMMC) }
 pub async fn itar_ear() -> Html<String> { render("ITAR/EAR", ITAR_EAR) }
 pub async fn accessibility() -> Html<String> { render("Accessibility", ACCESSIBILITY) }
 pub async fn federal_use_cases() -> Html<String> { render("Federal Use Cases", FEDERAL_USE) }
+pub async fn supply_chain_audit() -> Html<String> { render("Supply Chain Audit", SUPPLY_CHAIN_AUDIT) }

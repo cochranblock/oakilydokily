@@ -41,6 +41,7 @@ pub fn f1(state: AppState) -> Router {
         .route("/govdocs/itar-ear", get(govdocs::itar_ear))
         .route("/govdocs/accessibility", get(govdocs::accessibility))
         .route("/govdocs/federal-use-cases", get(govdocs::federal_use_cases))
+        .route("/govdocs/supply-chain-audit", get(govdocs::supply_chain_audit))
         .route("/health", get(pages::health))
         .route("/favicon.ico", get(|| async { Redirect::permanent("/assets/favicon.svg") }))
         .route("/sitemap.xml", get(pages::sitemap))
