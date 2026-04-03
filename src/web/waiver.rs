@@ -1,4 +1,4 @@
-#![allow(non_camel_case_types, non_snake_case, dead_code)]
+#![allow(non_camel_case_types, non_snake_case)]
 
 // Unlicense — cochranblock.org
 // Contributors: Mattbusel (XFactor), GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
@@ -224,8 +224,11 @@ pub async fn f75(
     .await
     {
         Ok(ref_id) => {
-            email::f78(email, full_name, &ref_id);
-            let loc = format!("/waiver/confirmed?ref={}", urlencoding::encode(&ref_id));
+            let email_ok = email::f78(email, full_name, &ref_id).await.is_ok();
+            let mut loc = format!("/waiver/confirmed?ref={}", urlencoding::encode(&ref_id));
+            if !email_ok {
+                loc.push_str("&email=failed");
+            }
             Redirect::to(loc.as_str()).into_response()
         }
         Err(e) => {
@@ -255,9 +258,14 @@ pub async fn confirmed(
             )
         })
         .unwrap_or_default();
+    let email_warn = if q.get("email").map(|v| v.as_str()) == Some("failed") {
+        r#"<p class="ds-detail" style="color:var(--warm);">We could not send a confirmation email. Your waiver is still recorded. Contact us if you need a copy.</p>"#
+    } else {
+        ""
+    };
     let v0 = format!(
-        r#"<section class="ds-waiver ds-done"><div class="ds-doc ds-complete"><div class="ds-check-icon">✓</div><h1>Waiver Signed</h1><p class="ds-success">Your signature has been recorded.</p>{}<p class="ds-detail">A copy is retained for 7 years. Contact us if you need a copy.</p><a href="/" class="ds-btn">Done</a></div></section>"#,
-        ref_line
+        r#"<section class="ds-waiver ds-done"><div class="ds-doc ds-complete"><div class="ds-check-icon">✓</div><h1>Waiver Signed</h1><p class="ds-success">Your signature has been recorded.</p>{}{}<p class="ds-detail">A copy is retained for 7 years. Contact us if you need a copy.</p><a href="/" class="ds-btn">Done</a></div></section>"#,
+        ref_line, email_warn
     );
     Html(format!(
         "{}{}{}{}",

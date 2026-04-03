@@ -1,4 +1,4 @@
-#![allow(non_camel_case_types, non_snake_case, dead_code)]
+#![allow(non_camel_case_types, non_snake_case)]
 
 // Unlicense — cochranblock.org
 // Contributors: Mattbusel (XFactor), GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
@@ -149,6 +149,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         s0: pool,
         s1: d1,
         s2: oakilydokily::web::forge::new_cache(),
+        s3: std::sync::Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
     });
     #[cfg(feature = "approuter")]
     f116(RegisterConfig {

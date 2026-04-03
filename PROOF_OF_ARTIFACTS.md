@@ -4,7 +4,7 @@
 
 *Concrete evidence that this project works, ships, and is real.*
 
-> A veterinary professional services site with an interactive mural, multi-auth, and ESIGN-compliant waivers.
+> A veterinary professional services site with multi-auth, ESIGN-compliant waivers, and federal compliance docs.
 
 ## Architecture
 
@@ -13,10 +13,8 @@ flowchart TD
     User[User] --> Axum[Axum Server :3000]
     Axum --> Pages[Pages: Home / About / Contact / Waiver]
     Axum --> Auth[OAuth: Google / Facebook / Apple / Manual]
-    Axum --> WASM[mural-wasm Canvas]
-    WASM --> Pets[Pet Entities: wander / sleep / interact]
-    WASM --> Scenes[Scroll Scenes: Cozy Nook / Tubing / Doggy Door]
-    WASM -.-> Forge["/api/forge → Coming Soon — pixel-forge"]
+    Axum --> Mural[Static Mural — CSS animated hero image]
+    Axum -.-> Forge["/api/forge — Coming Soon — pixel-forge"]
     Axum --> Waiver[Waiver System]
     Waiver --> SQLite[(SQLite WAL)]
     Auth --> SQLite
@@ -45,7 +43,7 @@ flowchart TD
 | Static Mural | Server-rendered mural image with CSS gradient overlay (zero JS) |
 | Waiver System | Full audit trail: IP, User-Agent, terms hash, consent checkbox, signature. SQLite + gzip archive with auto-prune |
 | Multi-Auth Stack | Google/Facebook/Apple OAuth + manual signup. HMAC-SHA256 signed session cookies |
-| D1 Sharded Auth | Optional Cloudflare D1 backend — Coming Soon — waiting on [approuter](https://github.com/cochranblock/approuter) D1 integration |
+| D1 Sharded Auth | Optional Cloudflare D1 backend — active when `OD_AUTH_D1=1` + D1 env vars set |
 | Pixel Forge Integration | /api/forge — Coming Soon — waiting on [pixel-forge](https://github.com/cochranblock/pixel-forge) + [kova](https://github.com/cochranblock/kova) IRONHIVE cluster |
 
 ## QA Results (2026-03-30)

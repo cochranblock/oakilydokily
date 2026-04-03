@@ -1,10 +1,11 @@
-//! Waiver confirmation email. Gmail API (Workspace) or Resend. P20: blocking, no spawn.
+//! Waiver confirmation email. Gmail API (Workspace) or Resend. Async.
 
 // Unlicense — cochranblock.org
 // Contributors: Mattbusel (XFactor), GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
 
-/// f78 = send_waiver_confirmation. Why: Blocking per P20. Gmail API for Workspace; Resend fallback.
-pub fn f78(to: &str, full_name: &str, ref_id: &str) {
+/// f78 = send_waiver_confirmation. Gmail API for Workspace; Resend fallback.
+/// Returns Err(msg) if all send paths fail or no provider configured.
+pub async fn f78(to: &str, full_name: &str, ref_id: &str) -> Result<(), String> {
     let creds = std::env::var("GOOGLE_APPLICATION_CREDENTIALS").ok();
     let impersonate = std::env::var("GMAIL_IMPERSONATE_USER").ok();
     if let (Some(path), Some(impersonate_user)) = (
@@ -16,19 +17,20 @@ pub fn f78(to: &str, full_name: &str, ref_id: &str) {
                 .ok()
                 .filter(|s| !s.is_empty())
                 .unwrap_or_else(|| impersonate_user.clone());
-            if let Err(e) = f78_gmail(path, impersonate_user, &from, to, full_name, ref_id) {
-                tracing::warn!("Gmail API failed: {}. Falling back to Resend.", e);
-                f78_resend(to, full_name, ref_id);
+            match f78_gmail(path, impersonate_user, &from, to, full_name, ref_id).await {
+                Ok(()) => return Ok(()),
+                Err(e) => {
+                    tracing::warn!("Gmail API failed: {}. Falling back to Resend.", e);
+                    return f78_resend(to, full_name, ref_id).await;
+                }
             }
-            return;
         }
     }
-    f78_resend(to, full_name, ref_id);
+    f78_resend(to, full_name, ref_id).await
 }
 
 /// f78_gmail = send via Gmail API (service account + domain-wide delegation).
-/// Uses reqwest + jsonwebtoken directly. No rust-gmail dep needed.
-fn f78_gmail(
+async fn f78_gmail(
     creds_path: &str,
     impersonate_user: &str,
     from: &str,
@@ -42,7 +44,7 @@ fn f78_gmail(
         f79(full_name),
         f79(ref_id)
     );
-    let access_token = f78_gmail_token(creds_path, impersonate_user)?;
+    let access_token = f78_gmail_token(creds_path, impersonate_user).await?;
     let mime = format!(
         "From: {}\r\nTo: {}\r\nSubject: {}\r\nContent-Type: text/html; charset=utf-8\r\n\r\n{}\r\n",
         from, to, subject, content
@@ -55,16 +57,17 @@ fn f78_gmail(
         "{}/gmail/v1/users/me/messages/send",
         gmail_base.trim_end_matches('/')
     );
-    let send_res = reqwest::blocking::Client::new()
+    let send_res = reqwest::Client::new()
         .post(&send_url)
         .query(&[("alt", "json")])
         .bearer_auth(&access_token)
         .json(&body)
         .timeout(std::time::Duration::from_secs(15))
-        .send()?;
+        .send()
+        .await?;
     if !send_res.status().is_success() {
         let status = send_res.status();
-        let err = send_res.text().unwrap_or_else(|_| "unknown".into());
+        let err = send_res.text().await.unwrap_or_else(|_| "unknown".into());
         return Err(format!("Gmail API {}: {}", status, err).into());
     }
     tracing::info!("Waiver confirmation email sent via Gmail to {}", to);
@@ -72,7 +75,7 @@ fn f78_gmail(
 }
 
 /// f78_gmail_token = get OAuth2 access token via service account JWT.
-fn f78_gmail_token(
+async fn f78_gmail_token(
     creds_path: &str,
     impersonate_user: &str,
 ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
@@ -95,20 +98,21 @@ fn f78_gmail_token(
     let jwt = jsonwebtoken::encode(&header, &claims, &encoding_key)?;
     let token_url = std::env::var("OD_OAUTH2_TOKEN_URL")
         .unwrap_or_else(|_| "https://oauth2.googleapis.com/token".into());
-    let token_res = reqwest::blocking::Client::new()
+    let token_res = reqwest::Client::new()
         .post(&token_url)
         .form(&[
             ("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer"),
             ("assertion", &jwt),
         ])
         .timeout(std::time::Duration::from_secs(10))
-        .send()?;
+        .send()
+        .await?;
     if !token_res.status().is_success() {
         let status = token_res.status();
-        let err = token_res.text().unwrap_or_else(|_| "unknown".into());
+        let err = token_res.text().await.unwrap_or_else(|_| "unknown".into());
         return Err(format!("OAuth token {}: {}", status, err).into());
     }
-    let token_json: serde_json::Value = token_res.json()?;
+    let token_json: serde_json::Value = token_res.json().await?;
     if let Some(e) = token_json.get("error_description") {
         if let Some(s) = e.as_str() {
             return Err(format!("OAuth: {}", s).into());
@@ -120,13 +124,13 @@ fn f78_gmail_token(
         .ok_or_else(|| "missing access_token in token response".into())
 }
 
-/// f78_resend = send via Resend. Skips if RESEND_API_KEY unset.
-fn f78_resend(to: &str, full_name: &str, ref_id: &str) {
+/// f78_resend = send via Resend. Returns Err if send fails; Ok if sent or no API key configured.
+async fn f78_resend(to: &str, full_name: &str, ref_id: &str) -> Result<(), String> {
     let api_key = match std::env::var("RESEND_API_KEY") {
         Ok(k) if !k.is_empty() => k,
         _ => {
             tracing::debug!("RESEND_API_KEY not set, skipping waiver email");
-            return;
+            return Ok(());
         }
     };
     let from = std::env::var("RESEND_FROM")
@@ -143,7 +147,7 @@ fn f78_resend(to: &str, full_name: &str, ref_id: &str) {
         )
     });
 
-    let client = reqwest::blocking::Client::new();
+    let client = reqwest::Client::new();
     match client
         .post("https://api.resend.com/emails")
         .header("Authorization", format!("Bearer {}", api_key))
@@ -151,12 +155,22 @@ fn f78_resend(to: &str, full_name: &str, ref_id: &str) {
         .json(&body)
         .timeout(std::time::Duration::from_secs(10))
         .send()
+        .await
     {
         Ok(r) if r.status().is_success() => {
-            tracing::info!("Waiver confirmation email sent to {}", to)
+            tracing::info!("Waiver confirmation email sent to {}", to);
+            Ok(())
         }
-        Ok(r) => tracing::warn!("Resend failed {}: {:?}", r.status(), r.text().ok()),
-        Err(e) => tracing::warn!("Resend request failed: {}", e),
+        Ok(r) => {
+            let msg = format!("Resend failed {}: {:?}", r.status(), r.text().await.ok());
+            tracing::warn!("{}", msg);
+            Err(msg)
+        }
+        Err(e) => {
+            let msg = format!("Resend request failed: {}", e);
+            tracing::warn!("{}", msg);
+            Err(msg)
+        }
     }
 }
 

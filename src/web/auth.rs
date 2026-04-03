@@ -1,12 +1,14 @@
 //! Sign in with Google + Facebook OAuth + manual (email/password). f82/f83=Google f98/f99=Facebook f100/f101=manual f84=logout
 
-#![allow(non_camel_case_types, non_snake_case, dead_code)]
+#![allow(non_camel_case_types, non_snake_case)]
 // Unlicense — cochranblock.org
 // Contributors: Mattbusel (XFactor), GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
 
-use axum::extract::{Form, Query, State};
+use axum::extract::{ConnectInfo, Form, Query, State};
+use axum::http::HeaderMap;
 use axum::response::{Html, IntoResponse, Redirect};
 use axum_extra::extract::cookie::{Cookie, CookieJar, SameSite};
+use std::net::SocketAddr;
 use std::sync::Arc;
 
 use super::head;
@@ -14,6 +16,28 @@ use crate::AppState;
 use base64::Engine;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
+
+const RATE_LIMIT_MAX: usize = 10;
+const RATE_LIMIT_WINDOW_SECS: u64 = 60;
+
+/// f119 = check_rate_limit. Returns true if request is allowed, false if rate limited.
+async fn f119(state: &AppState, addr: SocketAddr, headers: &HeaderMap) -> bool {
+    let ip = headers
+        .get("x-forwarded-for")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.split(',').next())
+        .and_then(|s| s.trim().parse().ok())
+        .unwrap_or(addr.ip());
+    let now = std::time::Instant::now();
+    let mut map = state.s3.lock().await;
+    let entries = map.entry(ip).or_default();
+    entries.retain(|t| now.duration_since(*t).as_secs() < RATE_LIMIT_WINDOW_SECS);
+    if entries.len() >= RATE_LIMIT_MAX {
+        return false;
+    }
+    entries.push(now);
+    true
+}
 
 const SESSION_COOKIE: &str = "od_session";
 const STATE_COOKIE: &str = "od_oauth_state";
@@ -175,7 +199,7 @@ pub async fn f83(jar: CookieJar, Query(q): Query<t83>) -> impl IntoResponse {
         }
         let token_url = std::env::var("OD_OAUTH2_TOKEN_URL")
             .unwrap_or_else(|_| "https://oauth2.googleapis.com/token".into());
-        let token_resp = reqwest::blocking::Client::new()
+        let token_resp = reqwest::Client::new()
             .post(&token_url)
             .form(&[
                 ("code", code.as_str()),
@@ -185,9 +209,10 @@ pub async fn f83(jar: CookieJar, Query(q): Query<t83>) -> impl IntoResponse {
                 ("grant_type", "authorization_code"),
             ])
             .timeout(std::time::Duration::from_secs(10))
-            .send();
+            .send()
+            .await;
         let token_body = match token_resp {
-            Ok(r) if r.status().is_success() => match r.json::<serde_json::Value>() {
+            Ok(r) if r.status().is_success() => match r.json::<serde_json::Value>().await {
                 Ok(j) => j,
                 Err(e) => {
                     tracing::warn!("token parse: {}", e);
@@ -195,7 +220,7 @@ pub async fn f83(jar: CookieJar, Query(q): Query<t83>) -> impl IntoResponse {
                 }
             },
             Ok(r) => {
-                tracing::warn!("token exchange failed {}: {:?}", r.status(), r.text().ok());
+                tracing::warn!("token exchange failed {}: {:?}", r.status(), r.text().await.ok());
                 return (jar, Redirect::to("/")).into_response();
             }
             Err(e) => {
@@ -212,13 +237,14 @@ pub async fn f83(jar: CookieJar, Query(q): Query<t83>) -> impl IntoResponse {
         };
         let userinfo_url = std::env::var("OD_OPENID_USERINFO_URL")
             .unwrap_or_else(|_| "https://openidconnect.googleapis.com/v1/userinfo".into());
-        let user_resp = reqwest::blocking::Client::new()
+        let user_resp = reqwest::Client::new()
             .get(&userinfo_url)
             .bearer_auth(&access_token)
             .timeout(std::time::Duration::from_secs(5))
-            .send();
+            .send()
+            .await;
         match user_resp {
-            Ok(r) if r.status().is_success() => match r.json() {
+            Ok(r) if r.status().is_success() => match r.json().await {
                 Ok(u) => u,
                 Err(e) => {
                     tracing::warn!("userinfo parse: {}", e);
@@ -321,12 +347,13 @@ pub async fn f99(jar: CookieJar, Query(q): Query<t83>) -> impl IntoResponse {
         urlencoding::encode(&app_secret),
         urlencoding::encode(&code)
     );
-    let token_resp = reqwest::blocking::Client::new()
+    let token_resp = reqwest::Client::new()
         .get(&token_url)
         .timeout(std::time::Duration::from_secs(10))
-        .send();
+        .send()
+        .await;
     let token_body = match token_resp {
-        Ok(r) if r.status().is_success() => match r.json::<serde_json::Value>() {
+        Ok(r) if r.status().is_success() => match r.json::<serde_json::Value>().await {
             Ok(j) => j,
             Err(e) => {
                 tracing::warn!("Facebook token parse: {}", e);
@@ -337,7 +364,7 @@ pub async fn f99(jar: CookieJar, Query(q): Query<t83>) -> impl IntoResponse {
             tracing::warn!(
                 "Facebook token exchange failed {}: {:?}",
                 r.status(),
-                r.text().ok()
+                r.text().await.ok()
             );
             return (jar, Redirect::to("/")).into_response();
         }
@@ -357,12 +384,13 @@ pub async fn f99(jar: CookieJar, Query(q): Query<t83>) -> impl IntoResponse {
         "https://graph.facebook.com/me?fields=id,name,email&access_token={}",
         urlencoding::encode(&access_token)
     );
-    let user_resp = reqwest::blocking::Client::new()
+    let user_resp = reqwest::Client::new()
         .get(&me_url)
         .timeout(std::time::Duration::from_secs(5))
-        .send();
+        .send()
+        .await;
     let user: t82 = match user_resp {
-        Ok(r) if r.status().is_success() => match r.json() {
+        Ok(r) if r.status().is_success() => match r.json().await {
             Ok(u) => u,
             Err(e) => {
                 tracing::warn!("Facebook userinfo parse: {}", e);
@@ -457,7 +485,7 @@ pub async fn f92(jar: CookieJar, Query(q): Query<t83>) -> impl IntoResponse {
         tracing::warn!("Apple OAuth not configured");
         return (jar, Redirect::to("/")).into_response();
     }
-    let token_resp = reqwest::blocking::Client::new()
+    let token_resp = reqwest::Client::new()
         .post("https://appleid.apple.com/auth/token")
         .form(&[
             ("code", code.as_str()),
@@ -468,9 +496,10 @@ pub async fn f92(jar: CookieJar, Query(q): Query<t83>) -> impl IntoResponse {
         ])
         .header("Content-Type", "application/x-www-form-urlencoded")
         .timeout(std::time::Duration::from_secs(10))
-        .send();
+        .send()
+        .await;
     let token_body = match token_resp {
-        Ok(r) if r.status().is_success() => match r.json::<serde_json::Value>() {
+        Ok(r) if r.status().is_success() => match r.json::<serde_json::Value>().await {
             Ok(j) => j,
             Err(e) => {
                 tracing::warn!("Apple token parse: {}", e);
@@ -481,7 +510,7 @@ pub async fn f92(jar: CookieJar, Query(q): Query<t83>) -> impl IntoResponse {
             tracing::warn!(
                 "Apple token exchange failed {}: {:?}",
                 r.status(),
-                r.text().ok()
+                r.text().await.ok()
             );
             return (jar, Redirect::to("/")).into_response();
         }
@@ -684,12 +713,17 @@ fn f101_set_session(mut jar: CookieJar, email: &str, name: &str) -> Result<Cooki
     Ok(jar)
 }
 
-/// f101=login_post. Checks users table, then OD_MANUAL_USERS.
+/// f101=login_post. Checks users table, then OD_MANUAL_USERS. Rate limited.
 pub async fn f101(
     State(s): State<Arc<AppState>>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     jar: CookieJar,
     Form(f): Form<t84>,
 ) -> impl IntoResponse {
+    if !f119(&s, addr, &headers).await {
+        return (jar, (axum::http::StatusCode::TOO_MANY_REQUESTS, "Too many requests")).into_response();
+    }
     if f88(&jar).is_some() {
         let (redirect, jar) = f96(jar);
         return (jar, redirect).into_response();
@@ -787,12 +821,17 @@ pub async fn f102(jar: CookieJar) -> impl IntoResponse {
     (jar, Redirect::to("/auth/login")).into_response()
 }
 
-/// f103=signup_post. Creates user, logs in, redirects.
+/// f103=signup_post. Creates user, logs in, redirects. Rate limited.
 pub async fn f103(
     State(s): State<Arc<AppState>>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     jar: CookieJar,
     Form(f): Form<t85>,
 ) -> impl IntoResponse {
+    if !f119(&s, addr, &headers).await {
+        return (jar, (axum::http::StatusCode::TOO_MANY_REQUESTS, "Too many requests")).into_response();
+    }
     if f88(&jar).is_some() {
         let (redirect, jar) = f96(jar);
         return (jar, redirect).into_response();
