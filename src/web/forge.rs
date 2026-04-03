@@ -73,30 +73,67 @@ pub async fn handler(
     let plugin_json = serde_json::to_string(&plugin_req)
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("json: {e}")))?;
 
-    // SSH to node, pipe JSON to pixel-forge plugin
-    let output = Command::new("ssh")
-        .arg("-o").arg("ConnectTimeout=10")
-        .arg("-o").arg("BatchMode=yes")
-        .arg(FORGE_NODE)
-        .arg(format!("cd ~/pixel-forge && source ~/.cargo/env && echo '{}' | {} plugin", plugin_json, FORGE_BIN))
-        .output()
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("ssh: {e}")))?;
+    // SSH to node with retry + exponential backoff (3 attempts: immediate, 1s, 2s)
+    const MAX_ATTEMPTS: u32 = 3;
+    let ssh_cmd = format!(
+        "cd ~/pixel-forge && source ~/.cargo/env && echo '{}' | {} plugin",
+        plugin_json, FORGE_BIN
+    );
+    let mut last_err: Option<(StatusCode, String)> = None;
+    let mut response_ok: Option<serde_json::Value> = None;
 
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err((StatusCode::BAD_GATEWAY, format!("node error: {stderr}")));
+    for attempt in 0..MAX_ATTEMPTS {
+        if attempt > 0 {
+            tokio::time::sleep(std::time::Duration::from_secs(attempt as u64)).await;
+        }
+        let output = Command::new("ssh")
+            .arg("-o").arg("ConnectTimeout=10")
+            .arg("-o").arg("BatchMode=yes")
+            .arg(FORGE_NODE)
+            .arg(&ssh_cmd)
+            .output()
+            .await;
+
+        match output {
+            Err(e) => {
+                last_err = Some((StatusCode::SERVICE_UNAVAILABLE, format!("ssh: {e}")));
+                continue;
+            }
+            Ok(out) if !out.status.success() => {
+                let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+                last_err = Some((StatusCode::SERVICE_UNAVAILABLE, format!("node error: {stderr}")));
+                continue;
+            }
+            Ok(out) => {
+                let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+                match serde_json::from_str::<serde_json::Value>(stdout.trim()) {
+                    Err(e) => {
+                        last_err = Some((StatusCode::BAD_GATEWAY, format!("parse: {e} — raw: {stdout}")));
+                        // Don't retry parse errors — node responded but output is wrong
+                        break;
+                    }
+                    Ok(parsed) => {
+                        if !parsed.get("ok").and_then(|v| v.as_bool()).unwrap_or(false) {
+                            let err = parsed.get("error").and_then(|v| v.as_str()).unwrap_or("unknown").to_string();
+                            last_err = Some((StatusCode::BAD_GATEWAY, format!("pixel-forge: {err}")));
+                            break;
+                        }
+                        response_ok = Some(parsed);
+                        break;
+                    }
+                }
+            }
+        }
     }
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let response: serde_json::Value = serde_json::from_str(stdout.trim())
-        .map_err(|e| (StatusCode::BAD_GATEWAY, format!("parse: {e} — raw: {stdout}")))?;
-
-    // Check plugin response
-    if !response.get("ok").and_then(|v| v.as_bool()).unwrap_or(false) {
-        let err = response.get("error").and_then(|v| v.as_str()).unwrap_or("unknown");
-        return Err((StatusCode::BAD_GATEWAY, format!("pixel-forge: {err}")));
-    }
+    let response = match response_ok {
+        Some(r) => r,
+        None => {
+            let (code, msg) = last_err.unwrap_or((StatusCode::SERVICE_UNAVAILABLE, "forge unavailable".into()));
+            tracing::warn!("forge failed after {} attempts: {}", MAX_ATTEMPTS, msg);
+            return Err((code, msg));
+        }
+    };
 
     // Cache successful result
     let mut cache = state.s2.lock().await;

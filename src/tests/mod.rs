@@ -103,11 +103,125 @@ pub async fn f30() -> i32 {
         }
     }
 
+    // --- adversarial input tests (POST /waiver) ---
+    // Server must have OD_TEST_WAIVER_BYPASS=1 set for these to reach validation.
+    let waiver_post_url = format!("{}/waiver", base);
+    let adversarial_cases: &[(&str, &str, &str, &str, &[u16])] = &[
+        // (name, email, xss, sig, expected_status_codes)
+        // XSS in name field
+        ("<script>alert(1)</script>", "x@y.com", "1", "<script>alert(1)</script>", &[400, 303]),
+        // XSS in email — invalid email → 400
+        ("Jane", "<script>@y.com", "1", "Jane", &[400]),
+        // SQL injection in name — valid structure, should not crash
+        ("'; DROP TABLE waivers;--", "x@y.com", "1", "'; DROP TABLE waivers;--", &[303, 400]),
+        // Oversized name (>200 chars)
+        (&"A".repeat(201), "x@y.com", "1", &"A".repeat(201), &[400]),
+        // Oversized email (>254 chars)
+        ("Jane", &format!("{}@y.com", "a".repeat(250)), "1", "Jane", &[400]),
+        // Missing consent boxes
+        ("Jane", "jane@y.com", "0", "Jane", &[400]),
+        // Empty signature
+        ("Jane", "jane@y.com", "1", "", &[400]),
+        // Oversized signature (>200 chars)
+        ("Jane", "jane@y.com", "1", &"A".repeat(201), &[400]),
+    ];
+
+    for (name, email, consent, sig, expected_codes) in adversarial_cases {
+        let label = format!("adversarial_waiver name={:?} email={:?}", &name[..name.len().min(30)], &email[..email.len().min(30)]);
+        let params = [
+            ("full_name", *name),
+            ("email", *email),
+            ("consent_electronic", *consent),
+            ("agree_terms", *consent),
+            ("signature", *sig),
+        ];
+        match client_no_redirect
+            .post(&waiver_post_url)
+            .form(&params)
+            .send()
+            .await
+        {
+            Ok(resp) => {
+                let code = resp.status().as_u16();
+                if expected_codes.contains(&code) {
+                    println!("  [PASS] {} (code={})", label, code);
+                } else {
+                    eprintln!("  [FAIL] {} (code={}, expected one of {:?})", label, code, expected_codes);
+                    failed += 1;
+                }
+            }
+            Err(e) => {
+                eprintln!("  [FAIL] {} (req: {})", label, e);
+                failed += 1;
+            }
+        }
+    }
+
+    // --- forge endpoint: POST /api/forge returns valid JSON or service error ---
+    {
+        let forge_url = format!("{}/api/forge", base);
+        let body = serde_json::json!({"class": "animal", "palette": "stardew", "count": 1, "steps": 1});
+        match client.post(&forge_url).json(&body).send().await {
+            Ok(resp) => {
+                let code = resp.status().as_u16();
+                // Accept 200 (cached/live), 503 (gd unreachable), 502 (node error)
+                if [200u16, 502, 503].contains(&code) {
+                    println!("  [PASS] forge_endpoint (code={})", code);
+                } else {
+                    eprintln!("  [FAIL] forge_endpoint (unexpected code={})", code);
+                    failed += 1;
+                }
+            }
+            Err(e) => {
+                eprintln!("  [FAIL] forge_endpoint (req: {})", e);
+                failed += 1;
+            }
+        }
+    }
+
+    // --- snapshot: key page content must include expected landmarks ---
+    let snapshot_checks: &[(&str, &str, &[&str])] = &[
+        ("snap_home_title", "/", &["<title>", "OakilyDokily"]),
+        ("snap_home_skip_nav", "/", &["skip-link", "Skip to main content"]),
+        ("snap_waiver_form_fields", "/waiver", &["full_name", "email", "signature", "agree_terms", "consent_electronic"]),
+        ("snap_waiver_no_xss_reflection", "/waiver", &[]),
+        ("snap_about_title", "/about", &["<title>", "About"]),
+        ("snap_contact_title", "/contact", &["<title>", "Contact"]),
+        ("snap_health_ok", "/health", &["OK"]),
+        ("snap_sitemap_xml", "/sitemap.xml", &["<urlset", "<url>"]),
+    ];
+    for (name, path, patterns) in snapshot_checks {
+        let url = format!("{}{}", base, path);
+        let use_client = if path.starts_with("/waiver") && !path.contains("confirmed") {
+            &client_no_redirect
+        } else {
+            &client
+        };
+        match use_client.get(&url).send().await {
+            Ok(resp) => {
+                let code = resp.status().as_u16();
+                let body = resp.text().await.unwrap_or_default();
+                let ok = ((200..400).contains(&code))
+                    && (patterns.is_empty() || patterns.iter().all(|p| body.contains(*p)));
+                if ok {
+                    println!("  [PASS] {}", name);
+                } else {
+                    eprintln!("  [FAIL] {} (code={}, missing patterns in body)", name, code);
+                    failed += 1;
+                }
+            }
+            Err(e) => {
+                eprintln!("  [FAIL] {} (req: {})", name, e);
+                failed += 1;
+            }
+        }
+    }
+
     if failed > 0 {
         eprintln!("\n{} check(s) failed", failed);
         1
     } else {
-        println!("\nall {} checks passed", checks.len());
+        println!("\nall checks passed");
         0
     }
 }

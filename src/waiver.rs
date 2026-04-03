@@ -249,3 +249,126 @@ pub fn f77(full_name: &str, email: &str) -> Result<(), &'static str> {
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    // --- f77 unit tests ---
+
+    #[test]
+    fn validate_ok() {
+        assert!(f77("Jane Smith", "jane@example.com").is_ok());
+        assert!(f77("  Jane  ", "  jane@x.com  ").is_ok()); // trims whitespace
+    }
+
+    #[test]
+    fn validate_name_empty() {
+        assert_eq!(f77("", "x@y.com"), Err("name empty"));
+        assert_eq!(f77("   ", "x@y.com"), Err("name empty"));
+    }
+
+    #[test]
+    fn validate_email_empty() {
+        assert_eq!(f77("Jane", ""), Err("email empty"));
+        assert_eq!(f77("Jane", "   "), Err("email empty"));
+    }
+
+    #[test]
+    fn validate_email_invalid() {
+        assert_eq!(f77("Jane", "notanemail"), Err("email invalid"));
+        assert_eq!(f77("Jane", "@missing-local"), Err("email invalid"));
+        assert_eq!(f77("Jane", "missing-domain@"), Err("email invalid"));
+    }
+
+    #[test]
+    fn validate_name_too_long() {
+        let long = "a".repeat(201);
+        assert_eq!(f77(&long, "x@y.com"), Err("name too long"));
+        // exactly 200 is ok
+        let edge = "a".repeat(200);
+        assert!(f77(&edge, "x@y.com").is_ok());
+    }
+
+    #[test]
+    fn validate_email_too_long() {
+        // 255 chars: local@domain where local is padded
+        let long = format!("{}@y.com", "a".repeat(250));
+        assert_eq!(f77("Jane", &long), Err("email too long"));
+        let edge = format!("{}@y.com", "a".repeat(247)); // 254 total
+        assert!(f77("Jane", &edge).is_ok());
+    }
+
+    #[test]
+    fn validate_xss_input_accepted_by_validator() {
+        // Validation only checks structure; HTML escaping is the renderer's job.
+        // XSS payloads are valid names/emails from a validation perspective.
+        assert!(f77("<script>alert(1)</script>", "x@y.com").is_ok());
+        assert!(f77("Jane", "x+tag@y.com").is_ok());
+    }
+
+    // --- terms_hash determinism ---
+
+    #[test]
+    fn terms_hash_deterministic() {
+        assert_eq!(terms_hash(), terms_hash());
+        assert!(!terms_hash().is_empty());
+    }
+
+    // --- insert + archive roundtrip ---
+
+    #[tokio::test]
+    async fn insert_roundtrip() {
+        let pool = init_pool_memory().await.expect("in-memory pool");
+        let dir = TempDir::new().unwrap();
+        // Set ARCHIVE_DIR for this test run (may already be set; if so, skip archive check)
+        let _ = ARCHIVE_DIR.set(dir.path().to_path_buf());
+
+        let ref_id = insert(&pool, "Test User", "test@example.com", Some("127.0.0.1"), Some("test-ua"), "Test User")
+            .await
+            .expect("insert ok");
+        assert!(!ref_id.is_empty());
+        assert_eq!(ref_id.len(), 36); // UUID v4
+
+        // Record is in DB
+        let row: (String, String, String) = sqlx::query_as(
+            "SELECT full_name, email, signature_text FROM waivers WHERE id = ?"
+        )
+        .bind(&ref_id)
+        .fetch_one(&pool)
+        .await
+        .expect("row exists");
+        assert_eq!(row.0, "Test User");
+        assert_eq!(row.1, "test@example.com");
+        assert_eq!(row.2, "Test User");
+    }
+
+    #[tokio::test]
+    async fn insert_duplicate_uuid_impossible() {
+        // Two separate inserts produce different IDs.
+        let pool = init_pool_memory().await.expect("pool");
+        let id1 = insert(&pool, "A", "a@b.com", None, None, "A").await.unwrap();
+        let id2 = insert(&pool, "B", "b@c.com", None, None, "B").await.unwrap();
+        assert_ne!(id1, id2);
+    }
+
+    #[tokio::test]
+    async fn user_create_and_get() {
+        let pool = init_pool_memory().await.expect("pool");
+        user_create(&pool, "u@x.com", "hash123", "User Name").await.expect("create ok");
+        let got = user_get(&pool, "u@x.com").await.expect("query ok");
+        assert_eq!(got, Some(("User Name".into(), "hash123".into())));
+        // Unknown user returns None
+        let none = user_get(&pool, "missing@x.com").await.expect("query ok");
+        assert!(none.is_none());
+    }
+
+    #[tokio::test]
+    async fn user_create_duplicate_fails() {
+        let pool = init_pool_memory().await.expect("pool");
+        user_create(&pool, "u@x.com", "hash1", "Name").await.expect("first ok");
+        let err = user_create(&pool, "u@x.com", "hash2", "Name2").await;
+        assert!(err.is_err()); // UNIQUE constraint
+    }
+}
