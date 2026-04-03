@@ -3,13 +3,10 @@
 // Unlicense — cochranblock.org
 // Contributors: Mattbusel (XFactor), GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
 
-use axum::extract::State;
 use axum::response::Html;
 use axum_extra::extract::CookieJar;
-use std::sync::Arc;
 
 use super::{auth, head};
-use crate::AppState;
 
 /// f70 = head. p3 = optional extra head (e.g. GA4)
 fn f70(p0: &str, p1: &str, p2: &str, p3: &str) -> String {
@@ -27,7 +24,7 @@ fn f73() -> &'static str {
 }
 
 /// f104 = home. GET /. Hero with 8-bit island cover, auth link.
-pub async fn home(State(_s): State<Arc<AppState>>, jar: CookieJar) -> Html<String> {
+pub async fn home(jar: CookieJar) -> Html<String> {
     let auth_link = head::f89(
         auth::f88(&jar)
             .as_ref()
@@ -48,7 +45,7 @@ pub async fn home(State(_s): State<Arc<AppState>>, jar: CookieJar) -> Html<Strin
 }
 
 /// f105 = about. GET /about. Services, resume, auth link.
-pub async fn about(State(_s): State<Arc<AppState>>, jar: CookieJar) -> Html<String> {
+pub async fn about(jar: CookieJar) -> Html<String> {
     let auth_link = head::f89(
         auth::f88(&jar)
             .as_ref()
@@ -69,7 +66,7 @@ pub async fn about(State(_s): State<Arc<AppState>>, jar: CookieJar) -> Html<Stri
 }
 
 /// f106 = contact. GET /contact. Email, book-call CTA.
-pub async fn contact(State(_s): State<Arc<AppState>>, jar: CookieJar) -> Html<String> {
+pub async fn contact(jar: CookieJar) -> Html<String> {
     let auth_link = head::f89(
         auth::f88(&jar)
             .as_ref()

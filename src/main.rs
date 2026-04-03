@@ -114,6 +114,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         )
         .init();
 
+    // Fail fast: SESSION_SECRET must be 32+ chars if any auth provider is configured
+    let has_auth = ["GOOGLE_CLIENT_ID", "FB_APP_ID", "APPLE_CLIENT_ID", "OD_MANUAL_USERS"]
+        .iter()
+        .any(|k| std::env::var(k).map(|v| !v.trim().is_empty()).unwrap_or(false));
+    if has_auth {
+        match std::env::var("SESSION_SECRET") {
+            Ok(s) if s.len() >= 32 => {}
+            Ok(s) => {
+                tracing::error!("SESSION_SECRET is {} chars, need 32+. Auth will not work.", s.len());
+                std::process::exit(1);
+            }
+            Err(_) => {
+                tracing::error!("SESSION_SECRET not set. Required when auth providers are configured.");
+                std::process::exit(1);
+            }
+        }
+    }
+
     let data_dir = std::env::var("OAKILYDOKILY_DATA_DIR").unwrap_or_else(|_| {
         std::env::var("COCHRANBLOCK_DATA_ROOT")
             .ok()
@@ -145,11 +163,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     tracing::info!("hot-reload: bound {} with SO_REUSEPORT", addr);
 
     // Register with approuter (new instance takes traffic)
+    let rate_limiter = std::sync::Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new()));
+    // Prune expired rate limit entries every 60s
+    {
+        let rl = rate_limiter.clone();
+        tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+                let now = std::time::Instant::now();
+                let mut map = rl.lock().await;
+                map.retain(|_ip: &std::net::IpAddr, entries: &mut Vec<std::time::Instant>| {
+                    entries.retain(|t| now.duration_since(*t).as_secs() < 60);
+                    !entries.is_empty()
+                });
+            }
+        });
+    }
     let app = router::router(AppState {
         s0: pool,
         s1: d1,
         s2: oakilydokily::web::forge::new_cache(),
-        s3: std::sync::Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
+        s3: rate_limiter,
     });
     #[cfg(feature = "approuter")]
     f116(RegisterConfig {

@@ -21,6 +21,7 @@ async fn main() {
                 .env("BIND", "127.0.0.1")
                 .env("OAKILYDOKILY_DATA_DIR", data_dir)
                 .env("BASE", format!("http://127.0.0.1:{}", port))
+                .env("OD_TEST_WAIVER_BYPASS", "1")
                 .stdout(std::process::Stdio::null())
                 .stderr(std::process::Stdio::null())
                 .spawn()

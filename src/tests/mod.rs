@@ -48,6 +48,20 @@ pub async fn f30() -> i32 {
         ("gap_nav_waiver", "/", &["Waiver", "/waiver"]),
         ("gap_nav_about", "/", &["About", "/about"]),
         ("gap_nav_contact", "/", &["Contact", "/contact"]),
+        // govdocs routes
+        ("govdocs_index", "/govdocs", &["Federal Compliance", "SBOM"]),
+        ("govdocs_sbom", "/govdocs/sbom", &[]),
+        ("govdocs_security", "/govdocs/security", &[]),
+        ("govdocs_ssdf", "/govdocs/ssdf", &[]),
+        ("govdocs_supply_chain", "/govdocs/supply-chain", &[]),
+        ("govdocs_supply_chain_audit", "/govdocs/supply-chain-audit", &[]),
+        ("govdocs_privacy", "/govdocs/privacy", &[]),
+        ("govdocs_fips", "/govdocs/fips", &[]),
+        ("govdocs_fedramp", "/govdocs/fedramp", &[]),
+        ("govdocs_cmmc", "/govdocs/cmmc", &[]),
+        ("govdocs_itar_ear", "/govdocs/itar-ear", &[]),
+        ("govdocs_accessibility", "/govdocs/accessibility", &[]),
+        ("govdocs_federal_use", "/govdocs/federal-use-cases", &[]),
     ];
 
     let client_no_redirect = reqwest::Client::builder()
