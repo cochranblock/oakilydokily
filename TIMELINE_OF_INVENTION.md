@@ -8,6 +8,61 @@
 
 ---
 
+## Human Revelations — Invented Techniques
+
+*Novel ideas that came from human insight, not AI suggestion. These are original contributions to the field.*
+
+### ESIGN-Compliant Waiver with 7-Year Retention in Single Binary (March 2026)
+
+**Invention:** A legally compliant electronic signature waiver system (ESIGN Act, 15 U.S.C. 7001-7031) with 7-year retention, audit trail, and multi-auth — all in a single Rust binary with SQLite WAL, no external services.
+
+**The Problem:** Veterinary service businesses need signed liability waivers before boarding animals. Paper waivers get lost. DocuSign costs $25/month and requires cloud connectivity. Self-hosted solutions (HelloSign alternatives) are PHP/Python stacks with PostgreSQL that need a full server.
+
+**The Insight:** ESIGN compliance requires three things: (1) intent to sign (a separate signature field from the name field), (2) consent to electronic records, and (3) retention of the signed record. None of these require a cloud service. A SQLite database with WAL mode, a separate `signature` input distinct from `full_name`, and a 2,557-day (7-year) retention policy in the archive pruner — that's the entire legal requirement, in a single binary.
+
+**The Technique:**
+1. Separate `signature` field from `full_name` — ESIGN requires demonstrated intent, not just typing a name
+2. SQLite WAL mode: concurrent reads during writes, crash-safe, single-file database
+3. `archive_prune`: 2,557-day retention (7 years) — was incorrectly set to 365 days, caught and fixed during audit
+4. Audit trail: timestamped record of who signed what, when, from which IP
+5. Multi-auth: Google/Facebook/Apple/manual — signer identity verified before signing
+6. Zero external services: no DocuSign, no Adobe Sign, no cloud storage
+
+**Result:** A veterinary business gets ESIGN-compliant waivers in a 9.1MB binary. 7-year retention. Audit trail. Multi-auth identity verification. No monthly subscription. No cloud dependency.
+
+**Named:** Single-Binary ESIGN Waiver
+**Commit:** `79d816d` (signature field + 7-year retention)
+**Origin:** A real business requirement — the first paying partnership needed liability waivers for animal boarding. Michael Cochran realized the entire ESIGN compliance requirement fits in a SQLite schema and a Rust handler. No SaaS needed.
+
+### Zero-JavaScript Architecture (March 2026)
+
+**Invention:** A production web application with 2,496 lines of Rust and 0 lines of JavaScript — server-rendered HTML with CSS animations, no WASM, no client-side framework, no build step for frontend code.
+
+**The Problem:** Modern web apps ship megabytes of JavaScript to the client. React, Vue, Angular — they all require Node.js build pipelines, npm dependencies, and client-side rendering. The JavaScript ecosystem has more supply chain vulnerabilities than any other language ecosystem. For a simple waiver form, this is massive overkill.
+
+**The Insight:** HTML forms work without JavaScript. CSS animations work without JavaScript. The `<form>` element with `action` and `method` attributes is the original client-server protocol — it sends data to the server and the server responds with a new page. This is sufficient for a waiver form, a login page, a dashboard, and a mural. Zero JavaScript means zero client-side supply chain risk.
+
+**The Technique:**
+1. All pages server-rendered via Axum handlers returning HTML strings
+2. All interactivity via HTML forms with POST actions
+3. All animations via CSS (gradients, transitions, keyframes)
+4. Static mural via CSS gradient instead of WASM canvas (replaced 67KB of JavaScript)
+5. No build step for frontend — `cargo build` is the only build command
+
+**Result:** 2,496 lines of Rust. 0 lines of JavaScript. No Node.js. No npm. No webpack. No client-side rendering. The entire site loads in one HTTP response with zero additional script fetches.
+
+**Named:** Zero-JS Architecture
+**Commit:** `cb0cbf6` (JS removal)
+**Origin:** Removing the WASM canvas mural (which required gl.js, mural-bridge.js) and realizing that a CSS gradient looked just as good. If the most complex visual element doesn't need JavaScript, nothing does.
+
+### 2026-04-08 — Human Revelations Documentation Pass
+
+**What:** Documented novel human-invented techniques across the full CochranBlock portfolio. Added Human Revelations section with Single-Binary ESIGN Waiver and Zero-JS Architecture.
+**Commit:** See git log
+**AI Role:** AI formatted and wrote the sections. Human identified which techniques were genuinely novel, provided the origin stories, and directed the documentation pass.
+
+---
+
 ## Entries
 
 ### 2026-04-03 — P23 Triple Lens Synthesis: Pyramid Architecture Risk/Opportunity
