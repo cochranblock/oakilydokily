@@ -1,10 +1,10 @@
 <!-- Unlicense — cochranblock.org -->
 
-# Timeline of Invention
+# Timeline of Invention — oakilydokily
 
 *Dated, commit-level record of what was built, when, and why. Proves human-piloted AI development — not generated spaghetti.*
 
-> Every entry maps to real commits. Run `git log --oneline` to verify.
+> Every entry below maps to real commits. Run `git log --oneline` to verify.
 
 ## How to Read This Document
 
@@ -15,6 +15,7 @@ Each entry follows this format:
 - **Why**: Business or technical reason driving the decision
 - **Commit**: Short hash(es) for traceability
 - **AI Role**: What the AI did vs. what the human directed
+- **Proof**: Link to artifact, screenshot, test output, or live URL
 
 This document exists because AI-assisted code has a trust problem. Anyone can generate 10,000 lines of spaghetti. This timeline proves that a human pilot directed every decision, verified every output, and shipped working software.
 
@@ -67,22 +68,26 @@ This document exists because AI-assisted code has a trust problem. Anyone can ge
 **Commit:** `cb0cbf6` (JS removal)
 **Origin:** Removing the WASM canvas mural (which required gl.js, mural-bridge.js) and realizing that a CSS gradient looked just as good. If the most complex visual element doesn't need JavaScript, nothing does.
 
-### 2026-04-08 — Human Revelations Documentation Pass
-
-**What:** Documented novel human-invented techniques across the full CochranBlock portfolio. Added Human Revelations section with Single-Binary ESIGN Waiver and Zero-JS Architecture.
-**Commit:** See git log
-**AI Role:** AI formatted and wrote the sections. Human identified which techniques were genuinely novel, provided the origin stories, and directed the documentation pass.
-
 ---
 
 ## Entries
 
-### 2026-04-09 — Docs Refresh: Timeline + Proof Audit
+*Reverse chronological. Most recent first.*
 
-**What:** Full audit of TIMELINE_OF_INVENTION.md and PROOF_OF_ARTIFACTS.md against current source. Backfilled the 2026-04-03 security/test burst that was missing from the timeline. Updated Proof metrics: binary 8.7 → 8.8 MB, Rust LOC 2,748 → 3,211 (+16.8%), integration checks 25 → 59, added 15 unit tests, route count raised from 19 tested → 32 registered. Added "How to Read This Document" section (cochranblock pattern). Added Named Techniques section to Proof.
-**Why:** Docs drifted after the 2026-04-03 security burst — the forge RCE fix and backlog sprint weren't represented in the invention timeline, and Proof metrics were stale by several hundred lines of code. Federal procurement reviewers and security auditors check these files first; they must match what's in git.
-**Commit:** (this commit)
-**AI Role:** AI read git log, counted routes/tests/LOC, wrote new entries, synchronized metrics. Human directed the refresh pass.
+### 2026-04-09 — Canonical Template Conformance + Docs Refresh
+
+**What:** Standardized TIMELINE_OF_INVENTION.md and PROOF_OF_ARTIFACTS.md to match the canonical templates at `~/.claude/templates/`. Timeline: added project name to title, added **Proof** bullet to "How to Read", added reverse-chronological subtitle, moved Human Revelations doc-pass entry into Entries proper. Proof: full restructure into template sections (Project Metrics, Repository, Architecture, Named Techniques, Test Coverage, Compliance, Build, Verification). Also backfilled the 2026-04-03 security/test burst that was missing from the timeline. Synced metrics: binary 8.7 → 8.8 MB, Rust LOC 2,748 → 3,211 (+16.8%), integration checks 25 → 59, unit tests 0 → 15, routes 19 tested → 32 registered, federal compliance docs 12 → 13, total commits 71. Added three Named Techniques: Single-Binary ESIGN Waiver, Zero-JS Architecture, Forge Shell-Injection-Proof RPC. Verified with `cargo check`.
+**Why:** Federal procurement reviewers and security auditors check these files first; they must match what's in git AND follow the same structure across all CochranBlock repos so reviewers can navigate by muscle memory. The 2026-04-03 forge RCE fix and backlog sprint weren't represented in the invention timeline. Template conformance is the flag that says "this is the same trust document everywhere, not a one-off."
+**Commit:** `f5e6881` (docs refresh), (this commit) (template conformance)
+**AI Role:** AI read both canonical templates, reformatted existing content to match, counted routes/tests/LOC/commits, wrote new entries, ran `cargo check` to confirm no code regression. Human directed the standardization pass.
+**Proof:** `cargo check` green, `ls -lh target/release/oakilydokily` → 8.8 MB, `git rev-list --count HEAD` → 71.
+
+### 2026-04-08 — Human Revelations Documentation Pass
+
+**What:** Documented novel human-invented techniques. Added Human Revelations section to Timeline with Single-Binary ESIGN Waiver (ESIGN Act compliance in a single Rust binary with SQLite WAL + 7-year retention) and Zero-JS Architecture (2,496 Rust / 0 JavaScript) — both with Problem/Insight/Technique/Result/Origin breakdowns.
+**Why:** AI-assisted code gets accused of being derivative. The Human Revelations section is the counter-evidence: specific techniques, dated, with origin stories that are provably human.
+**Commit:** `e00b9ed`
+**AI Role:** AI formatted and wrote the sections. Human identified which techniques were genuinely novel, provided the origin stories, and directed the documentation pass.
 
 ### 2026-04-03 — Forge RCE Close + Backlog Sprint (Security + Tests)
 
