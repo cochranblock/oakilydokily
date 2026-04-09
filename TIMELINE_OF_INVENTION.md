@@ -2,9 +2,21 @@
 
 # Timeline of Invention
 
-*Dated, commit-level record of what was built, when, and why.*
+*Dated, commit-level record of what was built, when, and why. Proves human-piloted AI development — not generated spaghetti.*
 
 > Every entry maps to real commits. Run `git log --oneline` to verify.
+
+## How to Read This Document
+
+Each entry follows this format:
+
+- **Date**: When the work shipped (not when it was started)
+- **What**: Concrete deliverable — binary, feature, fix, architecture change
+- **Why**: Business or technical reason driving the decision
+- **Commit**: Short hash(es) for traceability
+- **AI Role**: What the AI did vs. what the human directed
+
+This document exists because AI-assisted code has a trust problem. Anyone can generate 10,000 lines of spaghetti. This timeline proves that a human pilot directed every decision, verified every output, and shipped working software.
 
 ---
 
@@ -64,6 +76,20 @@
 ---
 
 ## Entries
+
+### 2026-04-09 — Docs Refresh: Timeline + Proof Audit
+
+**What:** Full audit of TIMELINE_OF_INVENTION.md and PROOF_OF_ARTIFACTS.md against current source. Backfilled the 2026-04-03 security/test burst that was missing from the timeline. Updated Proof metrics: binary 8.7 → 8.8 MB, Rust LOC 2,748 → 3,211 (+16.8%), integration checks 25 → 59, added 15 unit tests, route count raised from 19 tested → 32 registered. Added "How to Read This Document" section (cochranblock pattern). Added Named Techniques section to Proof.
+**Why:** Docs drifted after the 2026-04-03 security burst — the forge RCE fix and backlog sprint weren't represented in the invention timeline, and Proof metrics were stale by several hundred lines of code. Federal procurement reviewers and security auditors check these files first; they must match what's in git.
+**Commit:** (this commit)
+**AI Role:** AI read git log, counted routes/tests/LOC, wrote new entries, synchronized metrics. Human directed the refresh pass.
+
+### 2026-04-03 — Forge RCE Close + Backlog Sprint (Security + Tests)
+
+**What:** Closed a critical RCE in `/api/forge`: (1) added `auth::f88(&jar)` auth gate at handler entry — unauthenticated POSTs now get 401 before any SSH is attempted, (2) replaced shell-string interpolation with a compile-time-constant `remote_cmd()` and stdin-only JSON delivery — user fields never touch a shell. Also executed backlog items 1-3, 6-7: SESSION_SECRET fail-fast at startup (exits if <32 chars when any auth provider is configured), `OD_TEST_WAIVER_BYPASS=1` unlocks 4 previously-skipped waiver checks (test count 25 → 38), rate-limiter HashMap pruned every 60s by background tokio task (prevents unbounded memory growth under auth traffic), 13 govdocs route checks added, unused `State` extractor removed from page handlers. Added 12 unit tests in `waiver.rs` (validation, insert roundtrip, user CRUD, terms_hash determinism) and 3 in `forge.rs` (`remote_cmd_is_constant`, `injection_payload_not_in_remote_cmd`, `cache_key_includes_all_fields`). Added adversarial POST /waiver tests (XSS in name/email/signature, SQL injection, oversized payloads, missing consent), forge auth-gate integration test, 4 forge injection integration tests (single-quote, backtick, subshell, newline), and 8 snapshot content checks. Created BACKLOG.md with 20 prioritized work items.
+**Why:** The P23 Triple Lens analysis flagged `/api/forge` as the highest-severity gap in the portfolio — an anonymous caller could trigger SSH to the production GPU node with attacker-controlled shell metacharacters. Verdict from that session: "solid machine, no locks on the doors." This commit puts the locks on. Triple sims: 3/3 pass, 38 checks each, 0 skips. Clippy: 0 warnings (release + tests).
+**Commits:** `640e5ae` (RCE close — auth gate + stdin-only JSON), `d8a0663` (forge retry/backoff + 12 waiver unit tests + adversarial integration tests), `d0fa1a1` (SESSION_SECRET fail-fast + bypass env + rate-limiter cleanup + govdocs coverage + State removal), `58168a5` (BACKLOG.md), `8655e26` (P23 readjust fire)
+**AI Role:** AI identified attack surfaces via code audit, wrote all tests, implemented all fixes, ran triple sims to green. Human directed triage priorities after P23 synthesis and approved remediation approach.
 
 ### 2026-04-03 — P23 Triple Lens Synthesis: Pyramid Architecture Risk/Opportunity
 
