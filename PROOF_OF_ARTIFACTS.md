@@ -71,6 +71,64 @@ flowchart TD
 | Async I/O | All external HTTP calls (OAuth, email, Turnstile) use async reqwest |
 | BACKLOG.md | Self-reorganizing prioritized work stack, max 20 items, cross-project dependency tags |
 
+## Modules
+
+| Module | Purpose |
+|--------|---------|
+| `src/main.rs` | Entry point, approuter registration, server bind |
+| `src/waiver.rs` | SQLite waiver persistence, gzip archive, user CRUD |
+| `src/d1_auth.rs` | Sharded Cloudflare D1 auth storage (optional) |
+| `src/web/router.rs` | All routes: pages, auth, waiver, forge, assets |
+| `src/web/auth.rs` | Google/Facebook/Apple OAuth + manual email/password |
+| `src/web/pages.rs` | Home, about, contact, sitemap |
+| `src/web/waiver.rs` | Waiver form GET/POST, Turnstile verification |
+| `src/web/email.rs` | Gmail API + Resend fallback for waiver confirmation |
+| `src/web/forge.rs` | /api/forge — SSH to [pixel-forge](https://github.com/cochranblock/pixel-forge) on GPU node for AI sprite generation |
+| `src/web/head.rs` | GA4, nav, shared HTML head helpers |
+| `src/web/assets.rs` | Static asset serving via rust-embed |
+| `mural-wasm/` | Macroquad 2D mural targeting wasm32 (archived — static mural active) |
+
+## Dependencies on Other CochranBlock Projects
+
+| Feature | Depends On | Status |
+|---------|-----------|--------|
+| Reverse proxy registration | [approuter](https://github.com/cochranblock/approuter) | Active — `--features approuter` |
+| AI sprite generation (`/api/forge`) | [pixel-forge](https://github.com/cochranblock/pixel-forge) | Implemented — requires pixel-forge binary on GPU node |
+| IRONHIVE GPU cluster (forge backend) | [kova](https://github.com/cochranblock/kova) C2 nodes | Implemented — SSH dispatch to node `gd` |
+| Production hosting | [approuter](https://github.com/cochranblock/approuter) + Cloudflare tunnel | Active |
+| Test framework ([exopack](https://github.com/cochranblock/exopack)) | [exopack](https://github.com/cochranblock/exopack) | Active — `--features tests` |
+| Android pocket server | [pocket-server](https://github.com/cochranblock/pocket-server) scaffold | Scaffold — waiting on [pocket-server](https://github.com/cochranblock/pocket-server) |
+
+## Supported Platforms
+
+| Platform | Target | Method | Status |
+|----------|--------|--------|--------|
+| macOS ARM64 | `aarch64-apple-darwin` | Native | Shipping |
+| macOS Intel | `x86_64-apple-darwin` | Native | Supported |
+| Linux x86_64 | `x86_64-unknown-linux-gnu` | Remote (st) | Shipping |
+| Linux ARM64 | `aarch64-unknown-linux-gnu` | Cross | Supported |
+| Linux ARM 32 | `armv7-unknown-linux-gnueabihf` | Cross | Supported |
+| Android ARM64 | `aarch64-linux-android` | cargo-ndk | Scaffold |
+| iOS ARM64 | `aarch64-apple-ios` | Xcode | Scaffold |
+| Windows x86_64 | `x86_64-pc-windows-gnu` | Cross | Supported |
+| FreeBSD x86_64 | `x86_64-unknown-freebsd` | Cross | Supported |
+| RISC-V 64 | `riscv64gc-unknown-linux-gnu` | Cross | Supported |
+| IBM POWER | `powerpc64le-unknown-linux-gnu` | Cross | Supported |
+| PWA (any browser) | Service worker | Built-in | Shipping |
+
+Build all: `./scripts/build-all-targets.sh`
+
+## Production Features
+
+| Feature | Details |
+|---------|---------|
+| Hot reload | SO_REUSEPORT socket binding + PID lockfile — zero dropped requests on deploy |
+| Rate limiting | 10 requests/IP/60s on auth endpoints, HTTP 429 on exceed |
+| Session signing | HMAC-SHA256 signed cookies, 7-day expiry, HttpOnly + Secure |
+| Async HTTP | All external calls (OAuth, email) use async reqwest — no blocking I/O |
+| Waiver retention | 7-year (2,557 days) gzip archive with auto-prune |
+| Turnstile CAPTCHA | Optional Cloudflare Turnstile on waiver form |
+
 ## Named Techniques
 
 | Technique | Where | Summary |
@@ -119,12 +177,26 @@ Architecture risk/opportunity analysis of the [kova](https://github.com/cochranb
 - **ESIGN Act:** 15 U.S.C. 7001-7031 compliant — typed signature, consent to electronic records, 7-year retention
 - **13 federal compliance docs** at `/govdocs`: index, SBOM, security posture, SSDF, supply-chain, supply-chain-audit, privacy impact, FIPS 140-2/3, FedRAMP, CMMC L1-2, ITAR/EAR, accessibility (Section 508), federal use cases
 
+Full federal compliance docs live in [govdocs/](govdocs/) (EO 14028, NIST SP 800-218, FIPS, CMMC, supply chain audit, and others — 12 docs, all served at `/govdocs/*`).
+
 ## Build
 
 ```
 cargo build --release -p oakilydokily --features approuter
 cargo run -p oakilydokily --bin oakilydokily-test --features tests
 ```
+
+## Quick Start
+
+```bash
+# Run with approuter feature
+cargo run -p oakilydokily --features approuter
+
+# Build release
+cargo build --release -p oakilydokily --features approuter
+```
+
+See [`.env.example`](.env.example) for all configuration options.
 
 ## Verification
 
@@ -148,3 +220,9 @@ cargo run -p oakilydokily --bin oakilydokily-test --features tests
 ---
 
 *Part of the [CochranBlock](https://cochranblock.org) zero-cloud architecture. All source under the [Unlicense](LICENSE).*
+<!-- COCHRANBLOCK-BRAND-FOOTER:START - generated by cochranblock/scripts/brand-stamp.sh -->
+
+---
+
+<sub>&#9656; **THE COCHRAN BLOCK, LLC** &#183; CAGE `1CQ66` &#183; UEI `W7X3HAQL9CF9` &#183; UNLICENSE &#183; [cochranblock.org](https://cochranblock.org)</sub>
+<!-- COCHRANBLOCK-BRAND-FOOTER:END -->

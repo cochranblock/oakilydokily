@@ -7,7 +7,7 @@ use axum::{routing::{get, post}, Router};
 use axum::response::Redirect;
 use tower_http::{compression::CompressionLayer, trace::TraceLayer};
 
-use super::{assets, auth, forge, govdocs, pages, waiver};
+use super::{assets, auth, forge, govdocs, pages, visits, waiver};
 use crate::AppState;
 
 /// f1 = router. Why: Single entry for all OD routes; state shared via Arc.
@@ -47,6 +47,7 @@ pub fn f1(state: AppState) -> Router {
         .route("/sitemap.xml", get(pages::sitemap))
         .route("/assets/*path", get(assets::serve))
         .layer(CompressionLayer::new())
+        .layer(axum::middleware::from_fn(visits::log_middleware))
         .layer(TraceLayer::new_for_http())
         .with_state(state)
 }

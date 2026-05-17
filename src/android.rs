@@ -36,6 +36,7 @@ pub extern "system" fn Java_org_oakilydokily_ServerService_startServer(
             s0: pool,
             s1: None,
             s2: crate::web::forge::new_cache(),
+            s3: std::sync::Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
         });
         let addr = format!("127.0.0.1:{}", port);
         let listener = tokio::net::TcpListener::bind(&addr).await.expect("bind");

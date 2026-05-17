@@ -526,7 +526,7 @@ pub async fn f92(jar: CookieJar, Query(q): Query<t83>) -> impl IntoResponse {
             return (jar, Redirect::to("/")).into_response();
         }
     };
-    let (email, name) = match f93(id_token) {
+    let (email, name) = match f93(id_token).await {
         Some((e, n)) => (e, n),
         None => {
             tracing::warn!("Apple id_token decode failed");
@@ -555,44 +555,186 @@ pub async fn f92(jar: CookieJar, Query(q): Query<t83>) -> impl IntoResponse {
     (jar, Redirect::to("/")).into_response()
 }
 
-/// f93 = decode_apple_id_token. Returns (email, name). Name may be empty.
-fn f93(id_token: &str) -> Option<(String, String)> {
-    let parts: Vec<&str> = id_token.splitn(3, '.').collect();
-    if parts.len() != 3 {
+const APPLE_JWKS_URL: &str = "https://appleid.apple.com/auth/keys";
+const APPLE_ISSUER: &str = "https://appleid.apple.com";
+const APPLE_JWKS_TTL_SECS: u64 = 3600;
+
+#[derive(Clone)]
+struct AppleJwk {
+    kid: String,
+    n: String,
+    e: String,
+}
+
+struct JwksCache {
+    keys: Vec<AppleJwk>,
+    fetched_at: std::time::Instant,
+}
+
+fn jwks_cell() -> &'static tokio::sync::Mutex<Option<JwksCache>> {
+    static CELL: std::sync::OnceLock<tokio::sync::Mutex<Option<JwksCache>>> = std::sync::OnceLock::new();
+    CELL.get_or_init(|| tokio::sync::Mutex::new(None))
+}
+
+async fn fetch_apple_jwks() -> Option<Vec<AppleJwk>> {
+    let resp = reqwest::Client::new()
+        .get(APPLE_JWKS_URL)
+        .timeout(std::time::Duration::from_secs(5))
+        .send()
+        .await
+        .ok()?;
+    if !resp.status().is_success() {
         return None;
     }
-    let payload_b64 = parts[1];
-    let payload_bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
-        .decode(payload_b64)
-        .ok()?;
-    let payload: serde_json::Value = serde_json::from_slice(&payload_bytes).ok()?;
-    let sub = payload.get("sub")?.as_str()?.to_string();
-    let email = payload
-        .get("email")
-        .and_then(|v| v.as_str())
-        .unwrap_or("")
-        .trim()
-        .to_lowercase();
-    let name = payload
-        .get("name")
+    let v: serde_json::Value = resp.json().await.ok()?;
+    let keys = v.get("keys")?.as_array()?;
+    let mut out = Vec::with_capacity(keys.len());
+    for k in keys {
+        let kid = k.get("kid").and_then(|v| v.as_str())?.to_string();
+        let n = k.get("n").and_then(|v| v.as_str())?.to_string();
+        let e = k.get("e").and_then(|v| v.as_str())?.to_string();
+        out.push(AppleJwk { kid, n, e });
+    }
+    Some(out)
+}
+
+async fn apple_jwk_for_kid(kid: &str) -> Option<AppleJwk> {
+    let cell = jwks_cell();
+    {
+        let g = cell.lock().await;
+        if let Some(c) = g.as_ref() {
+            if c.fetched_at.elapsed().as_secs() < APPLE_JWKS_TTL_SECS {
+                if let Some(k) = c.keys.iter().find(|k| k.kid == kid) {
+                    return Some(k.clone());
+                }
+            }
+        }
+    }
+    let fresh = fetch_apple_jwks().await?;
+    let found = fresh.iter().find(|k| k.kid == kid).cloned();
+    let mut g = cell.lock().await;
+    *g = Some(JwksCache {
+        keys: fresh,
+        fetched_at: std::time::Instant::now(),
+    });
+    found
+}
+
+/// f93 = verify_apple_id_token. Verifies RS256 signature against Apple JWKS,
+/// validates iss/aud/exp, returns (email, name). Returns None on any verification failure.
+async fn f93(id_token: &str) -> Option<(String, String)> {
+    use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
+
+    let header = match decode_header(id_token) {
+        Ok(h) => h,
+        Err(e) => {
+            tracing::warn!("Apple id_token header decode failed: {}", e);
+            return None;
+        }
+    };
+    let kid = match header.kid {
+        Some(k) => k,
+        None => {
+            tracing::warn!("Apple id_token missing kid");
+            return None;
+        }
+    };
+    let jwk = match apple_jwk_for_kid(&kid).await {
+        Some(j) => j,
+        None => {
+            tracing::warn!("Apple JWKS lookup failed for kid={}", kid);
+            return None;
+        }
+    };
+    let key = match DecodingKey::from_rsa_components(&jwk.n, &jwk.e) {
+        Ok(k) => k,
+        Err(e) => {
+            tracing::warn!("Apple JWK -> DecodingKey: {}", e);
+            return None;
+        }
+    };
+    let aud = std::env::var("APPLE_CLIENT_ID").unwrap_or_default();
+    if aud.is_empty() {
+        tracing::warn!("APPLE_CLIENT_ID not set; refusing to verify Apple id_token");
+        return None;
+    }
+    let mut validation = Validation::new(Algorithm::RS256);
+    validation.set_audience(&[&aud]);
+    validation.set_issuer(&[APPLE_ISSUER]);
+
+    #[derive(Deserialize)]
+    struct AppleClaims {
+        sub: String,
+        #[serde(default)]
+        email: Option<String>,
+        #[serde(default)]
+        name: Option<serde_json::Value>,
+    }
+
+    let data = match decode::<AppleClaims>(id_token, &key, &validation) {
+        Ok(d) => d,
+        Err(e) => {
+            tracing::warn!("Apple id_token verify failed: {}", e);
+            return None;
+        }
+    };
+    let claims = data.claims;
+    let email_raw = claims.email.as_deref().unwrap_or("").trim().to_lowercase();
+    let name_raw = claims
+        .name
+        .as_ref()
         .and_then(|v| v.as_str())
         .unwrap_or("")
         .trim()
         .to_string();
-    let email = if email.is_empty() {
-        let s: &str = sub.as_ref();
+    let email = if email_raw.is_empty() {
+        let s: &str = claims.sub.as_ref();
         format!("{}@privaterelay.appleid.com", &s[..s.len().min(16)])
     } else {
-        email
+        email_raw
     };
     Some((
         email,
-        if name.is_empty() {
+        if name_raw.is_empty() {
             "Apple user".into()
         } else {
-            name
+            name_raw
         },
     ))
+}
+
+#[cfg(test)]
+mod apple_jwt_tests {
+    use super::f93;
+
+    /// Garbage non-JWT input must be rejected (decode_header fails).
+    #[tokio::test]
+    async fn rejects_non_jwt() {
+        assert!(f93("not.a.jwt").await.is_none());
+        assert!(f93("").await.is_none());
+        assert!(f93("only-one-segment").await.is_none());
+    }
+
+    /// A JWT with no kid in the header must be rejected — required for JWKS lookup.
+    #[tokio::test]
+    async fn rejects_missing_kid() {
+        // Header {"alg":"RS256","typ":"JWT"} (no kid) base64url-encoded.
+        let header_b64 = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9";
+        let payload_b64 = "eyJzdWIiOiJ4In0";
+        let token = format!("{}.{}.fakesig", header_b64, payload_b64);
+        assert!(f93(&token).await.is_none());
+    }
+
+    /// A token signed with HS256 (or any algorithm we don't accept) must be rejected.
+    /// This is the alg-confusion attack class — the old f93 would have decoded it anyway.
+    #[tokio::test]
+    async fn rejects_alg_confusion() {
+        // Header {"alg":"HS256","typ":"JWT","kid":"x"} base64url-encoded.
+        let header_b64 = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IngifQ";
+        let payload_b64 = "eyJzdWIiOiJ4IiwiaXNzIjoiaHR0cHM6Ly9hcHBsZWlkLmFwcGxlLmNvbSJ9";
+        let token = format!("{}.{}.fakesig", header_b64, payload_b64);
+        assert!(f93(&token).await.is_none());
+    }
 }
 
 /// f100=login_page. GET /auth/login. OAuth + manual form. Create account → /auth/google.

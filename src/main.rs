@@ -107,12 +107,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         return Ok(());
     }
     dotenvy::dotenv().ok();
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
-        )
-        .init();
+    let _log_guard = oakilydokily::logs::init("oakilydokily").expect("logs init");
 
     // Fail fast: SESSION_SECRET must be 32+ chars if any auth provider is configured
     let has_auth = ["GOOGLE_CLIENT_ID", "FB_APP_ID", "APPLE_CLIENT_ID", "OD_MANUAL_USERS"]

@@ -4,6 +4,7 @@
 pub mod assets;
 pub mod auth;
 pub mod email;
+pub mod visits;
 pub mod forge;
 pub mod govdocs;
 pub mod head;

@@ -4,6 +4,7 @@
 // Contributors: Mattbusel (XFactor), GotEmCoach, KOVA, Claude Opus 4.6, SuperNinja, Composer 1.5, Google Gemini Pro 3
 
 pub mod d1_auth;
+pub mod logs;
 #[cfg(feature = "tests")]
 pub mod mock_google;
 #[cfg(feature = "tests")]
