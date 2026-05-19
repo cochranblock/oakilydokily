@@ -9,6 +9,8 @@ default-run = "oakilydokily"
 description = "Veterinary professional services site — ESIGN-compliant waivers, multi-auth, zero-cloud single binary"
 license = "Unlicense"
 repository = "https://github.com/cochranblock/oakilydokily"
+documentation = "https://cochranblock.github.io/oakilydokily/"
+homepage = "https://cochranblock.org/products"
 keywords = ["veterinary", "waiver", "esign", "axum", "zero-cloud"]
 categories = ["web-programming::http-server"]
 

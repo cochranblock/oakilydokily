@@ -28,6 +28,8 @@ Axum server with Google/Facebook/Apple OAuth, ESIGN-compliant liability waivers,
 
 ## Documentation
 
+**[cochranblock.github.io/oakilydokily](https://cochranblock.github.io/oakilydokily/)** — full mdBook docs (production guide, quality checks, Google Workspace setup).
+
 This README is the entry point. The actual docs live in two source-of-truth files at the root of the repo:
 
 - **[PROOF_OF_ARTIFACTS.md](PROOF_OF_ARTIFACTS.md)** — what exists today, status, source-linked. Build output, modules, routes, platforms, production features, named techniques, test coverage, federal compliance, P23 triple lens. If you want to know what this project *does*, read this.
